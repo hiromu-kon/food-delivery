@@ -1,13 +1,13 @@
 # CLAUDE.md
 
-フードデリバリーサービスのモノレポ（pnpm workspaces + Turborepo）。`apps/` の 1 ディレクトリ = 1 デプロイ単位。各ディレクトリの役割は `README.md`、設計の理由は `docs/architecture.md`。
+フードデリバリーサービスのモノレポ（pnpm workspaces + Turborepo）。`apps/` の 1 ディレクトリ = 1 デプロイ単位。各ディレクトリの役割は `README.md`、設計の理由は `docs/architecture.md`、要件と仕様は `docs/requirements/` と `docs/specs/`。
 
 ## 原則
 
 - 注文・決済・配達状況の正本は `apps/api`。web / アプリは API の結果を表示するだけで、金額や状態の判定をしない。
 - 型は `packages/db` → `packages/contract` → `apps/api`（`AppType`）→ `hc<AppType>()` の順に導出する。手書きで重複させない。
 - `eslint-disable` 系のコメントは効かない（`noInlineConfig`）。例外は `packages/config/eslint/` に `files` 指定で理由とともに登録する。
-- テストは実装と同じディレクトリに `<name>.test.ts` として置く。
+- テストは実装と同じディレクトリに `<name>.test.ts` として置く。業務ルールのテストは、名前の先頭に `docs/specs/business-rules.md` の ID を書く（`it('R-06 …')`）。
 
 ## コマンド
 

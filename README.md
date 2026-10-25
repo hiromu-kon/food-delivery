@@ -13,7 +13,7 @@
 | `packages/contract` | Zod                  | API の入出力スキーマ          |
 | `packages/config`   | —                    | tsconfig / ESLint の共通設定  |
 
-設計の理由は [docs/architecture.md](docs/architecture.md)、何をどこに置くかは各ディレクトリの `CLAUDE.md` と `.claude/rules/` にまとめている。
+要件定義は [docs/requirements/](docs/requirements/overview.md)、仕様は [docs/specs/](docs/specs/README.md)、設計の理由は [docs/architecture.md](docs/architecture.md)、何をどこに置くかは各ディレクトリの `CLAUDE.md` と `.claude/rules/` にまとめている。
 
 ```text
 food-delivery/
