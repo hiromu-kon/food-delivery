@@ -1,0 +1,41 @@
+name: デザイン
+description: ワイヤーフレーム・デザイン・トークンやコンポーネントを Penpot で作る
+labels: [design]
+body:
+  - type: input
+    id: parent
+    attributes:
+      label: 親 Issue
+      description: 機能のデザインなら親 Issue。デザイン基盤なら空欄
+      placeholder: '#12'
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 種類
+      options:
+        - ワイヤーフレーム
+        - デザイン
+        - トークン・コンポーネント
+    validations:
+      required: true
+  - type: input
+    id: screens
+    attributes:
+      label: 対象の画面
+      description: docs/specs/screens.md の画面 ID
+      placeholder: S-C04, S-C05
+  - type: textarea
+    id: todo
+    attributes:
+      label: やること
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了条件
+      placeholder: |
+        - [ ] Penpot のリンクを Issue に貼った
+        - [ ] 承認された
+    validations:
+      required: true

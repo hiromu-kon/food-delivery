@@ -1,0 +1,39 @@
+name: 実装タスク（子 Issue）
+description: 親 Issue の機能を、1 つのアプリ・パッケージ分だけ実装する。1 PR で閉じる大きさにする
+labels: [task]
+body:
+  - type: input
+    id: parent
+    attributes:
+      label: 親 Issue
+      description: 作成後に親 Issue の sub-issue として紐づける
+      placeholder: '#12'
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 対象
+      options:
+        - api
+        - web
+        - customer-app
+        - courier-app
+        - packages
+        - infra
+    validations:
+      required: true
+  - type: textarea
+    id: todo
+    attributes:
+      label: やること
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了条件
+      placeholder: |
+        - [ ] R-05 のテストが通る
+    validations:
+      required: true
