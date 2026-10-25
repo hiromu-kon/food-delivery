@@ -1,0 +1,26 @@
+{
+  "name": "@repo/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/*.json": "./tsconfig/*.json",
+    "./eslint/base": "./eslint/base.js",
+    "./eslint/next": "./eslint/next.js",
+    "./eslint/react-native": "./eslint/react-native.js",
+    "./eslint/client": "./eslint/client.js"
+  },
+  "dependencies": {
+    "@eslint/js": "catalog:",
+    "eslint-config-expo": "catalog:",
+    "eslint-config-next": "catalog:",
+    "globals": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "peerDependencies": {
+    "eslint": "^9"
+  },
+  "devDependencies": {
+    "eslint": "catalog:"
+  }
+}

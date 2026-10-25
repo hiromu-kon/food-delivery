@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Expo
+.expo/
+expo-env.d.ts
+ios/
+android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# turbo
+.turbo/
+
+# env
+.env
+.env*.local
+!.env.example
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+*.pem
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
