@@ -1,0 +1,11 @@
+{
+  "extends": ["expo/tsconfig.base", "@repo/config/tsconfig/base.json"],
+  "compilerOptions": {
+    // expo start が生成する expo-env.d.ts は gitignore 対象のため、CI でも process.env 等の型が付くよう明示する。
+    "types": ["expo/types"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}
