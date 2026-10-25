@@ -1,0 +1,41 @@
+name: 不具合
+description: 仕様と違う動きをする
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: 対象
+      options:
+        - api
+        - web
+        - customer-app
+        - courier-app
+        - packages
+        - infra
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動き
+      description: 根拠になる仕様の ID があれば書く
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動き
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 環境
+      placeholder: iOS 26 / Expo Go、Chrome 141 など

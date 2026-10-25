@@ -1,0 +1,39 @@
+name: 機能（親 Issue）
+description: docs/requirements/features.md の機能 1 つ分。実装は子 Issue に分ける
+labels: [feature]
+body:
+  - type: input
+    id: feature-id
+    attributes:
+      label: 機能 ID
+      description: docs/requirements/features.md の ID
+      placeholder: F-05
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 誰が何をできるようになるか
+    validations:
+      required: true
+  - type: textarea
+    id: specs
+    attributes:
+      label: 関連する仕様
+      description: 画面（S-）・業務ルール（R-）の ID と、docs/ のファイル
+      placeholder: |
+        - 画面: S-C05
+        - 業務ルール: R-04, R-05
+        - docs/specs/order-status.md
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了条件
+      description: 子 Issue がすべて閉じたうえで、利用者の操作として確認すること
+      placeholder: |
+        - [ ] 注文者がカードで支払って注文できる
+    validations:
+      required: true
