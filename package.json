@@ -1,0 +1,26 @@
+{
+  "name": "food-delivery",
+  "private": true,
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "depcruise": "sh scripts/depcruise.sh",
+    "check:structure": "sh scripts/check-structure.sh",
+    "check": "pnpm check:structure && pnpm depcruise && turbo run typecheck lint test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "dependency-cruiser": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}
