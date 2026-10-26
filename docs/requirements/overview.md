@@ -55,3 +55,4 @@ MVP に含める機能は [features.md](features.md) の優先度「MVP」のも
 - [非機能要件](non-functional.md)
 - [用語集](glossary.md)
 - 仕様（振る舞いの詳細）: [docs/specs/](../specs/README.md)
+- 利用規約・プライバシーポリシー（仮の文面）: [docs/legal/](../legal/terms.md)
