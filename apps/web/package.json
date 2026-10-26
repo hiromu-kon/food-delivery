@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@repo/contract": "workspace:*",
+    "@repo/design-tokens": "workspace:*",
     "@repo/domain": "workspace:*",
     "hono": "catalog:",
     "next": "catalog:",
