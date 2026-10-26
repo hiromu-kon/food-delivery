@@ -2,6 +2,20 @@
 
 MVP の画面に必要な部品だけを作る。見た目と状態は Penpot の「03 コンポーネント」ページが正本。ここには使い分けを書く。名前は Penpot と実装で同じにする。
 
+実装は shadcn/ui（アプリは React Native Reusables）を土台にする（[docs/architecture.md](../architecture.md)）。種類の名前が shadcn と違うものは、次のように対応させる。
+
+| Penpot           | shadcn/ui                             |
+| ---------------- | ------------------------------------- |
+| Button primary   | Button `default`                      |
+| Button secondary | Button `outline`                      |
+| Button ghost     | Button `ghost`                        |
+| Button danger    | Button `destructive`                  |
+| Toggle           | Switch                                |
+| NoticeBanner     | Alert                                 |
+| Toast            | Sonner                                |
+| BottomSheet      | Drawer（Web）・Bottom Sheet（アプリ） |
+| SideNav          | Sidebar                               |
+
 ## 操作
 
 | 名前              | 種類・状態                                                                               | 使い分け                                                                                            |
