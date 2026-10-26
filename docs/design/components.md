@@ -10,7 +10,7 @@ MVP の画面に必要な部品だけを作る。見た目・状態・使い分�
 | 入力           | `TextField` `Select` `Toggle` `Checkbox`                                                             |
 | 表示           | `StoreNoren` `StoreCard` `MenuItem` `StatusLabel` `Tag` `CountBadge` `OrderSteps` `ListItem` `Table` |
 | お知らせ       | `NoticeBanner` `Toast` `Spinner` `EmptyState`                                                        |
-| 移動           | `AppHeader` `TabBar` `SideNav` `Tabs` `CartBar`                                                      |
+| 移動           | `AppHeader` `TabBar` `SideNav` `TopBar` `Tabs` `CartBar`                                             |
 | 重ねて出すもの | `Dialog` `BottomSheet`                                                                               |
 
 ## shadcn/ui との対応
