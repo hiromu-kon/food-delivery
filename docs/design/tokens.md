@@ -1,66 +1,55 @@
 # デザイントークン
 
-値の正本は Penpot の「02 トークン」ページと、ファイルのトークン（Tokens タブ）。実装でコードに移したあとは、コード（Tailwind のテーマと React Native のテーマ）を正本にする。
+値の正本は [packages/design-tokens/theme.css](../../packages/design-tokens/theme.css)。Tailwind CSS v4 の `@theme` で書き、Web（`apps/web`）とアプリ（`apps/customer-app`・`apps/courier-app`、Uniwind）の両方が読み込む。Penpot の「02 トークン」はデザインを作るときの見本で、値を変えるときはコードを先に変えてから Penpot を合わせる。
+
+ここには、名前とクラスの対応、用途、値を決めた理由を書く。値そのものは書かない。
 
 ## 構成
 
 色は 2 層に分ける。
 
-| 層             | 役割                                     | 名前の例                 |
-| -------------- | ---------------------------------------- | ------------------------ |
-| プリミティブ   | 色の値そのものに名前を付けたパレット     | `indigo.700`, `gray.600` |
-| セマンティック | 用途に名前を付け、プリミティブを参照する | `color.text.secondary`   |
+| 層             | 役割                                     | 名前の例                                            |
+| -------------- | ---------------------------------------- | --------------------------------------------------- |
+| プリミティブ   | 色の値そのものに名前を付けたパレット     | `--palette-indigo-700`                              |
+| セマンティック | 用途に名前を付け、プリミティブを参照する | `color.text.secondary`（クラスは `text-secondary`） |
 
 画面やコンポーネントは**セマンティックだけを使う**。用途ごとの色を一か所で変えられるようにし、「この灰色は文字用か線用か」を迷わないようにするため。
 
+この決まりはコードで守る。`theme.css` は Tailwind の既定の色・文字の大きさ・角丸・影を消しているので、`bg-red-500` や `text-2xl` のようなクラスは効かない。プリミティブもクラスにならない。
+
 ## 色
 
-### プリミティブ
+セマンティックの `color.<種類>.<名前>` は、`<種類>-<名前>` のクラスになる。
 
-| 名前         | 50      | 100     | 200     | 300     | 400     | 500     | 600     | 700     | 800     | 900     |
-| ------------ | ------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- |
-| indigo（藍） | #EEF2F8 | #DCE4F0 | #B9C8DF | #8FA6C8 | #5F7DA8 | #3A5A88 | #2A4A74 | #1F3B63 | #172D4C | #0F1F36 |
-| gray（鼠）   | #F6F7F9 | #EDEFF2 | #E2E5EA | #C9CED6 | #A3AAB5 | #7D8592 | #66707C | #4A525D | #2F353D | #1D2126 |
+| トークン                     | クラス                 | 用途                                           |
+| ---------------------------- | ---------------------- | ---------------------------------------------- |
+| `color.bg.base`              | `bg-base`              | 画面の背景                                     |
+| `color.bg.subtle`            | `bg-subtle`            | 区切った領域、入力欄の無効時                   |
+| `color.bg.brand`             | `bg-brand`             | のれん、主なボタン、カートのバー               |
+| `color.bg.brand-hover`       | `bg-brand-hover`       | 主なボタンのホバー                             |
+| `color.bg.brand-subtle`      | `bg-brand-subtle`      | 選択中の項目、調理中・準備完了のラベル         |
+| `color.bg.disabled`          | `bg-disabled`          | 無効なボタン                                   |
+| `color.bg.accent`            | `bg-accent`            | カートの点数、受付中の印                       |
+| `color.bg.danger`            | `bg-danger`            | 危険な操作のボタン（確認のダイアログの中だけ） |
+| `color.bg.danger-hover`      | `bg-danger-hover`      | 危険な操作のボタンのホバー                     |
+| `color.bg.danger-subtle`     | `bg-danger-subtle`     | エラーのお知らせ                               |
+| `color.bg.success-subtle`    | `bg-success-subtle`    | 完了のお知らせ、配達完了のラベル               |
+| `color.bg.warning-subtle`    | `bg-warning-subtle`    | 注意のお知らせ、受付待ちのラベル               |
+| `color.text.primary`         | `text-primary`         | 本文・見出し                                   |
+| `color.text.secondary`       | `text-secondary`       | 補足、ラベル                                   |
+| `color.text.disabled`        | `text-disabled`        | 無効な文字                                     |
+| `color.text.on-brand`        | `text-on-brand`        | 藍の上の文字                                   |
+| `color.text.on-brand-subtle` | `text-on-brand-subtle` | のれんの上の補足                               |
+| `color.text.brand`           | `text-brand`           | 選択中のタブ、文字だけのボタン                 |
+| `color.text.danger`          | `text-danger`          | エラーの文字（白・`danger-subtle` の上）       |
+| `color.text.success`         | `text-success`         | 完了の文字（白・`success-subtle` の上）        |
+| `color.text.warning`         | `text-warning`         | 受付待ち                                       |
+| `color.border.default`       | `border-default`       | 区切り線、カードの枠                           |
+| `color.border.strong`        | `border-strong`        | 入力欄の枠                                     |
+| `color.border.focus`         | `border-focus`         | キーボード操作での選択中                       |
+| `color.border.danger`        | `border-danger`        | エラーの入力欄                                 |
 
-| 名前           | 100     | 300     | 500     | 700     |
-| -------------- | ------- | ------- | ------- | ------- |
-| yellow（提灯） | #FDF1C7 | #F8D25A | #F2B705 | #7A5A00 |
-| red（朱）      | #FBECEA | —       | #C93A2B | #9B2A1E |
-| green（若竹）  | #E8F4EC | —       | #2E7D4F | #1F5A38 |
-
-`white` は #FFFFFF。
-
-### セマンティック
-
-| 名前                         | 参照       | 用途                                           |
-| ---------------------------- | ---------- | ---------------------------------------------- |
-| `color.bg.base`              | white      | 画面の背景                                     |
-| `color.bg.subtle`            | gray.50    | 区切った領域、入力欄の無効時                   |
-| `color.bg.brand`             | indigo.700 | のれん、主なボタン、カートのバー               |
-| `color.bg.brand-hover`       | indigo.800 | 主なボタンのホバー                             |
-| `color.bg.brand-subtle`      | indigo.50  | 選択中の項目、調理中・準備完了のラベル         |
-| `color.bg.disabled`          | gray.100   | 無効なボタン                                   |
-| `color.bg.accent`            | yellow.500 | カートの点数、受付中の印                       |
-| `color.bg.danger`            | red.500    | 危険な操作のボタン（確認のダイアログの中だけ） |
-| `color.bg.danger-hover`      | red.700    | 危険な操作のボタンのホバー                     |
-| `color.bg.danger-subtle`     | red.100    | エラーのお知らせ                               |
-| `color.bg.success-subtle`    | green.100  | 完了のお知らせ、配達完了のラベル               |
-| `color.bg.warning-subtle`    | yellow.100 | 注意のお知らせ、受付待ちのラベル               |
-| `color.text.primary`         | gray.900   | 本文・見出し                                   |
-| `color.text.secondary`       | gray.600   | 補足、ラベル                                   |
-| `color.text.disabled`        | gray.400   | 無効な文字                                     |
-| `color.text.on-brand`        | white      | 藍の上の文字                                   |
-| `color.text.on-brand-subtle` | indigo.200 | のれんの上の補足                               |
-| `color.text.brand`           | indigo.700 | 選択中のタブ、文字だけのボタン                 |
-| `color.text.danger`          | red.700    | エラーの文字（白・`danger-subtle` の上）       |
-| `color.text.success`         | green.700  | 完了の文字（白・`success-subtle` の上）        |
-| `color.text.warning`         | yellow.700 | 受付待ち                                       |
-| `color.border.default`       | gray.200   | 区切り線、カードの枠                           |
-| `color.border.strong`        | gray.300   | 入力欄の枠                                     |
-| `color.border.focus`         | indigo.500 | キーボード操作での選択中                       |
-| `color.border.danger`        | red.500    | エラーの入力欄                                 |
-
-文字と背景の組み合わせは、本文で 4.5:1 以上のコントラスト比にする。主な組み合わせの値は次のとおり（無効な文字は対象外）。
+文字と背景の組み合わせは、本文で 4.5:1 以上のコントラスト比にする。主な組み合わせの値は次のとおり（無効な文字は対象外）。色を変えたら、この表も測り直す。
 
 | 文字 / 背景                          | 比     |
 | ------------------------------------ | ------ |
@@ -77,30 +66,34 @@
 
 ## 文字
 
-| 名前        | 書体                | 大きさ | 太さ | 行の高さ | 用途               |
-| ----------- | ------------------- | ------ | ---- | -------- | ------------------ |
-| `display`   | Zen Old Mincho      | 30     | 700  | 1.3      | のれんの店名       |
-| `heading.l` | Zen Kaku Gothic New | 22     | 700  | 1.4      | 画面の見出し       |
-| `heading.m` | Zen Kaku Gothic New | 18     | 700  | 1.4      | 区切りの見出し     |
-| `body.l`    | Zen Kaku Gothic New | 16     | 500  | 1.6      | 商品名、主な本文   |
-| `body.m`    | Zen Kaku Gothic New | 14     | 400  | 1.6      | 本文               |
-| `body.s`    | Zen Kaku Gothic New | 12     | 400  | 1.6      | 補足、説明文       |
-| `label.l`   | Zen Kaku Gothic New | 16     | 700  | 1.2      | ボタン（大）、金額 |
-| `label.m`   | Zen Kaku Gothic New | 14     | 700  | 1.2      | ボタン（中）、タブ |
-| `label.s`   | Zen Kaku Gothic New | 11     | 700  | 1.2      | 状態のラベル、タグ |
+大きさ・行の高さ・太さを 1 つのクラスにまとめている。
+
+| クラス           | 用途               |
+| ---------------- | ------------------ |
+| `text-display`   | のれんの店名       |
+| `text-heading-l` | 画面の見出し       |
+| `text-heading-m` | 区切りの見出し     |
+| `text-body-l`    | 商品名、主な本文   |
+| `text-body-m`    | 本文               |
+| `text-body-s`    | 補足、説明文       |
+| `text-label-l`   | ボタン（大）、金額 |
+| `text-label-m`   | ボタン（中）、タブ |
+| `text-label-s`   | 状態のラベル、タグ |
+
+書体は `font-sans`（Zen Kaku Gothic New）と `font-display`（Zen Old Mincho、のれんの店名だけ）。Web とアプリで読み込み方が違うため、`theme.css` ではなく各アプリの CSS で決める。
 
 ## 余白・角丸・影
 
-| 名前                  | 値                                       | 用途                                       |
-| --------------------- | ---------------------------------------- | ------------------------------------------ |
-| `space.1`〜`space.10` | 4 の倍数（4, 8, 12, 16, 20, 24, 32, 40） | 余白は必ずこの段階から選ぶ                 |
-| `radius.xs`           | 4                                        | のれんの上端、タグ                         |
-| `radius.sm`           | 8                                        | 入力欄、お知らせ                           |
-| `radius.md`           | 12                                       | ボタン、写真                               |
-| `radius.lg`           | 16                                       | カートのバー、下から出るシート、ダイアログ |
-| `radius.full`         | 999                                      | 丸いボタン、チップ、点数                   |
-| `shadow.raised`       | 0 6px 16px rgba(15,31,54,0.18)           | 画面の上に浮くバー                         |
-| `shadow.overlay`      | 0 12px 32px rgba(15,31,54,0.24)          | ダイアログ、シート                         |
+| クラス                   | 用途                                                 |
+| ------------------------ | ---------------------------------------------------- |
+| `p-*` `m-*` `gap-*` など | 余白。1 段階 4px。1・2・3・4・5・6・8・10 だけを使う |
+| `rounded-xs`             | のれんの上端、タグ                                   |
+| `rounded-sm`             | 入力欄、お知らせ                                     |
+| `rounded-md`             | ボタン、写真                                         |
+| `rounded-lg`             | カートのバー、下から出るシート、ダイアログ           |
+| `rounded-full`           | 丸いボタン、チップ、点数                             |
+| `shadow-raised`          | 画面の上に浮くバー                                   |
+| `shadow-overlay`         | ダイアログ、シート                                   |
 
 影は藍を混ぜた色にし、灰色の影を全体に付けない。浮いているものにだけ使う。
 
