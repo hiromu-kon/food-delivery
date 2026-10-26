@@ -15,3 +15,4 @@ paths:
 | 環境変数                         | `src/env.ts` で Zod により検証して export する                         |
 
 - 金額・送料・状態の判定を画面で行わない。表示用の計算が必要なら `packages/domain` の関数を使う。
+- 画面の文言・色・余白・部品は `docs/design/` に従う。色や余白は値を直接書かず、トークンを使う。部品は `docs/design/components.md` にある名前で作る。
