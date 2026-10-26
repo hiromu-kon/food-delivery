@@ -60,8 +60,9 @@ DB のカラムを変えると、contract・API・クライアントの型が順
 | 対象                       | 使うもの                                                               |
 | -------------------------- | ---------------------------------------------------------------------- |
 | Web（注文者・店舗・運営）  | shadcn/ui。表は shadcn の Data Table（TanStack Table）、フォームは Zod |
-| 注文者アプリ・配達員アプリ | React Native Reusables（shadcn/ui の React Native 版）と NativeWind    |
+| 注文者アプリ・配達員アプリ | React Native Reusables（shadcn/ui の React Native 版）と Uniwind       |
 
 - 部品のコードをリポジトリに取り込む方式なので、`docs/design/` のトークンとコンポーネントに合わせて見た目を変えられる。Web とアプリで部品の名前と考え方をそろえられる。
-- 色や余白は Tailwind のテーマにトークンとして定義し、shadcn の色の変数（`--primary` など）に割り当てる。
+- 色や余白は Tailwind のテーマにトークンとして定義し、shadcn の色の変数（`--primary` など）に割り当てる。トークンは `packages/design-tokens/theme.css` の 1 つを Web とアプリで共有する。
+- アプリの Tailwind には NativeWind ではなく Uniwind を使う。NativeWind の安定版（v4）は Tailwind v3 で、Tailwind v4 に対応した v5 はまだリリース候補のため。Web と同じ Tailwind v4 にそろえないと、トークンを 1 つのファイルで共有できない。
 - Refine や react-admin のような管理画面のフレームワークは使わない。データの取得を独自の仕組みで行うため、`hc<AppType>()` で API の型を画面まで通す設計と二重になる。管理画面は店舗 6 枚・運営 7 枚で、表とフォームの部品で足りる。
