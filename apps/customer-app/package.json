@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@repo/contract": "workspace:*",
+    "@repo/design-tokens": "workspace:*",
     "@repo/domain": "workspace:*",
     "expo": "catalog:",
     "expo-constants": "catalog:",
@@ -23,6 +24,8 @@
     "react-native": "catalog:",
     "react-native-safe-area-context": "catalog:",
     "react-native-screens": "catalog:",
+    "tailwindcss": "catalog:",
+    "uniwind": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
