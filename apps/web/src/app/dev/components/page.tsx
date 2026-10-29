@@ -1,5 +1,5 @@
 import { orderStatuses } from '@repo/domain';
-import { ArrowLeftIcon, ReceiptTextIcon } from 'lucide-react';
+import { ArrowLeftIcon, ReceiptTextIcon, StoreIcon, UtensilsCrossedIcon } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import {
@@ -26,12 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SideNav } from '@/components/ui/side-nav';
 import { Spinner } from '@/components/ui/spinner';
 import { StatusLabel } from '@/components/ui/status-label';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { TextField } from '@/components/ui/text-field';
+import { TopBar } from '@/components/ui/top-bar';
 
+import { OrderTableDemo } from './order-table-demo';
 import { ToastDemo } from './toast-demo';
 
 const buttonVariants = ['primary', 'secondary', 'ghost', 'danger'] as const;
@@ -261,6 +265,51 @@ export default function ComponentCatalogPage() {
             description="近くのお店を見てみましょう"
             action={<Button variant="secondary">お店を探す</Button>}
           />
+        </Block>
+      </Section>
+
+      <Section title="移動">
+        <Block name="SideNav" description="店舗と運営のパソコン向けの画面の左側。">
+          <SideNav
+            className="static h-130"
+            title="〇〇食堂"
+            subtitle="店舗の管理"
+            items={[
+              { href: '/dev/components', label: '注文', icon: <ReceiptTextIcon />, count: 2 },
+              { href: '/store/menu', label: 'メニュー', icon: <UtensilsCrossedIcon /> },
+              { href: '/store/settings', label: '店舗の設定', icon: <StoreIcon /> },
+            ]}
+          />
+        </Block>
+        <Block
+          name="TopBar"
+          description="パソコンの店舗の画面の上部。受付の状態とログイン中のアカウントを見せる。"
+        >
+          <div className="border-default flex w-300 flex-col border">
+            <TopBar receptionStatus="open" account="staff@example.jp" />
+            <TopBar receptionStatus="stopped" account="staff@example.jp" />
+            <TopBar account="admin@example.jp" />
+          </div>
+        </Block>
+        <Block name="Tabs" description="同じ画面の中の切替。選択中は藍の下線。">
+          <Tabs defaultValue="定食" className="w-97.5">
+            <TabsList>
+              {['定食', '丼', 'サイド', 'ドリンク'].map((category) => (
+                <TabsTrigger key={category} value={category}>
+                  {category}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </Block>
+        <Block
+          name="Table"
+          description="店舗と運営のパソコン向けの一覧。スマートフォンでは使わない。"
+        >
+          <div className="flex w-188 flex-col gap-6">
+            <OrderTableDemo />
+            <OrderTableDemo empty />
+          </div>
         </Block>
       </Section>
 
