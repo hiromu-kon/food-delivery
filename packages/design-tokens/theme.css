@@ -59,6 +59,8 @@
   --background-color-danger-subtle: var(--palette-red-100);
   --background-color-success-subtle: var(--palette-green-100);
   --background-color-warning-subtle: var(--palette-yellow-100);
+  /* 幕は --palette-indigo-900 を透かす。影と同じく、透かした色は値で書く */
+  --background-color-scrim: rgba(15, 31, 54, 0.45);
 
   --text-color-primary: var(--palette-gray-900);
   --text-color-secondary: var(--palette-gray-600);
