@@ -1,10 +1,24 @@
-import { ArrowLeftIcon } from 'lucide-react';
+import { orderStatuses } from '@repo/domain';
+import { ArrowLeftIcon, ReceiptTextIcon } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CountBadge } from '@/components/ui/count-badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { IconButton } from '@/components/ui/icon-button';
 import { Label } from '@/components/ui/label';
+import { NoticeBanner } from '@/components/ui/notice-banner';
 import {
   Select,
   SelectContent,
@@ -12,8 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusLabel } from '@/components/ui/status-label';
 import { Switch } from '@/components/ui/switch';
+import { Tag } from '@/components/ui/tag';
 import { TextField } from '@/components/ui/text-field';
+
+import { ToastDemo } from './toast-demo';
 
 const buttonVariants = ['primary', 'secondary', 'ghost', 'danger'] as const;
 const buttonSizes = ['L', 'M'] as const;
@@ -24,6 +43,25 @@ const buttonLabels = {
   danger: '注文を取り消す',
 } satisfies Record<(typeof buttonVariants)[number], string>;
 const categories = ['定食', '丼', 'サイド', 'ドリンク', 'デザート'];
+const dialogs = [
+  {
+    variant: 'primary',
+    trigger: 'confirm を開く',
+    title: 'カートを空にしますか？',
+    description:
+      'カートには別のお店の商品が入っています。空にすると、このお店の商品を入れられます。',
+    cancel: '今のカートを残す',
+    action: 'カートを空にする',
+  },
+  {
+    variant: 'danger',
+    trigger: 'danger を開く',
+    title: '注文を取り消しますか？',
+    description: 'お店が受け付ける前なので、代金は請求されません。',
+    cancel: '取り消さない',
+    action: '注文を取り消す',
+  },
+] as const;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -174,6 +212,79 @@ export default function ComponentCatalogPage() {
               </Label>
             </div>
           ))}
+        </Block>
+      </Section>
+      <Section title="表示">
+        <Block name="StatusLabel" description="注文の状態。状態と 1 対 1 で対応する。">
+          <div className="flex flex-col items-start gap-3">
+            {orderStatuses.map((status) => (
+              <StatusLabel key={status} status={status} />
+            ))}
+          </div>
+        </Block>
+        <Block name="Tag" description="店舗の受付の状態など、短い補足。">
+          <div className="flex flex-col items-start gap-3">
+            <Tag tone="warning">まもなく受付終了</Tag>
+            <Tag tone="neutral">受付停止中</Tag>
+          </div>
+        </Block>
+        <Block name="CountBadge" description="カートの点数など。">
+          <div className="flex items-center gap-3">
+            <CountBadge count={2} />
+            <CountBadge count={12} />
+          </div>
+        </Block>
+      </Section>
+
+      <Section title="お知らせ">
+        <Block name="NoticeBanner" description="画面にとどまる状態の説明。">
+          <div className="flex w-90 flex-col gap-3">
+            <NoticeBanner tone="info">お店が受け付けると、調理が始まります</NoticeBanner>
+            <NoticeBanner tone="warning">最低注文金額まで、あと ¥240 です</NoticeBanner>
+            <NoticeBanner tone="danger">このお店は今、注文を受け付けていません</NoticeBanner>
+          </div>
+        </Block>
+        <Block
+          name="Toast"
+          description="操作の結果を数秒だけ伝える。ボタンを押すと画面の下に出る。"
+        >
+          <ToastDemo />
+        </Block>
+        <Block name="Spinner" description="1 秒以上かかる読み込み。">
+          <Spinner />
+        </Block>
+        <Block name="EmptyState" description="空のとき。次の行動のボタンを必ず置く。">
+          <EmptyState
+            className="w-80"
+            icon={<ReceiptTextIcon />}
+            title="まだ注文はありません"
+            description="近くのお店を見てみましょう"
+            action={<Button variant="secondary">お店を探す</Button>}
+          />
+        </Block>
+      </Section>
+
+      <Section title="重ねて出すもの">
+        <Block name="Dialog" description="元に戻せない操作の前の確認だけ。実行する側を右に置く。">
+          <div className="flex gap-3">
+            {dialogs.map((dialog) => (
+              <AlertDialog key={dialog.variant}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="secondary" size="M">
+                    {dialog.trigger}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
+                  <AlertDialogDescription>{dialog.description}</AlertDialogDescription>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{dialog.cancel}</AlertDialogCancel>
+                    <AlertDialogAction variant={dialog.variant}>{dialog.action}</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ))}
+          </div>
         </Block>
       </Section>
     </main>
