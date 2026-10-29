@@ -49,6 +49,8 @@
 | `color.border.focus`         | `border-focus`         | キーボード操作での選択中                       |
 | `color.border.danger`        | `border-danger`        | エラーの入力欄                                 |
 
+枠線の色を枠線以外に使うときは、`outline-(--border-color-focus)`（キーボード操作での選択中の枠）や `bg-(--border-color-strong)`（Toggle のオフの地）のように変数を参照する。Tailwind のアウトラインやリングの色は `--color-*` から作られ、ここでは消しているため。
+
 文字と背景の組み合わせは、本文で 4.5:1 以上のコントラスト比にする。主な組み合わせの値は次のとおり（無効な文字は対象外）。色を変えたら、この表も測り直す。
 
 | 文字 / 背景                          | 比     |
