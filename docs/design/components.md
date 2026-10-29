@@ -17,17 +17,18 @@ MVP の画面に必要な部品だけを作る。見た目・状態・使い分�
 
 実装は shadcn/ui（アプリは React Native Reusables）を土台にする（[docs/architecture.md](../architecture.md)）。Web の部品は shadcn の CLI が置く `apps/web/src/components/ui/` に置く。名前が同じもの（`Select` `Checkbox` `Tabs` など）はそのまま使い、shadcn にない部品（`StoreNoren` `MenuItem` `OrderSteps` など）は独自に作る。名前や種類が shadcn と違うものは、次のように対応させる。
 
-| Penpot       | 実装                                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------------------ |
-| Button       | Button。種類は Penpot の名前にした（shadcn の `default` `outline` `destructive` は使わない）           |
-| IconButton   | 独自（shadcn は Button の大きさの 1 つ）                                                               |
-| TextField    | 独自。shadcn の Input と Label を組み合わせる                                                          |
-| Toggle       | Switch。shadcn には押したままになるボタンの Toggle が別にあり、名前がぶつかるため                      |
-| Dialog       | AlertDialog。確認だけに使い、外側を押しても閉じないため                                                |
-| NoticeBanner | 独自。shadcn の Alert は `role="alert"` で読み上げを割り込ませるが、画面にとどまる説明には合わないため |
-| Toast        | Sonner                                                                                                 |
-| BottomSheet  | Drawer（Web）・Bottom Sheet（アプリ）                                                                  |
-| SideNav      | Sidebar                                                                                                |
+| Penpot       | 実装                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| Button       | Button。種類は Penpot の名前にした（shadcn の `default` `outline` `destructive` は使わない）               |
+| IconButton   | 独自（shadcn は Button の大きさの 1 つ）                                                                   |
+| TextField    | 独自。shadcn の Input と Label を組み合わせる                                                              |
+| Toggle       | Switch。shadcn には押したままになるボタンの Toggle が別にあり、名前がぶつかるため                          |
+| Dialog       | AlertDialog。確認だけに使い、外側を押しても閉じないため                                                    |
+| NoticeBanner | 独自。shadcn の Alert は `role="alert"` で読み上げを割り込ませるが、画面にとどまる説明には合わないため     |
+| Table        | Table。列の組み立ては TanStack Table の DataTable で行う（shadcn の Data Table と同じ考え方）              |
+| Toast        | Sonner                                                                                                     |
+| BottomSheet  | Drawer（Web）・Bottom Sheet（アプリ）                                                                      |
+| SideNav      | 独自。shadcn の Sidebar は開閉やスマートフォンでの引き出しまで持つが、パソコン向けの固定の列だけでよいため |
 
 ## 実装の注意
 
