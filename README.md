@@ -13,6 +13,7 @@
 | `packages/contract`      | Zod                  | API の入出力スキーマ                 |
 | `packages/config`        | —                    | tsconfig / ESLint の共通設定         |
 | `packages/design-tokens` | Tailwind CSS v4      | 色・文字・余白などのデザイントークン |
+| `packages/native-ui`     | React Native         | アプリ 2 つで使う画面の部品          |
 
 要件定義は [docs/requirements/](docs/requirements/overview.md)、仕様は [docs/specs/](docs/specs/README.md)、設計の理由は [docs/architecture.md](docs/architecture.md)、何をどこに置くかは各ディレクトリの `CLAUDE.md` と `.claude/rules/` にまとめている。
 
@@ -48,7 +49,8 @@ food-delivery/
 │  ├─ domain/
 │  ├─ contract/
 │  ├─ config/
-│  └─ design-tokens/
+│  ├─ design-tokens/
+│  └─ native-ui/
 ├─ scripts/                       構成・依存の検査
 ├─ compose.yaml                   ローカルの PostgreSQL
 ├─ pnpm-workspace.yaml            ワークスペースと依存バージョン（catalog）
