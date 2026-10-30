@@ -1,0 +1,46 @@
+{
+  "name": "@repo/native-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./theme.css": "./theme.css",
+    "./fonts": "./src/fonts.ts",
+    "./*": "./src/components/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@expo-google-fonts/zen-kaku-gothic-new": "catalog:",
+    "@expo-google-fonts/zen-old-mincho": "catalog:",
+    "@rn-primitives/checkbox": "catalog:",
+    "@rn-primitives/label": "catalog:",
+    "@rn-primitives/portal": "catalog:",
+    "@rn-primitives/select": "catalog:",
+    "@rn-primitives/slot": "catalog:",
+    "@rn-primitives/switch": "catalog:",
+    "class-variance-authority": "catalog:",
+    "cn": "catalog:",
+    "expo-font": "catalog:",
+    "lucide-react-native": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-svg": "*",
+    "uniwind": "*"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@types/react": "catalog:",
+    "eslint": "catalog:",
+    "expo": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "react-native-svg": "catalog:",
+    "typescript": "catalog:",
+    "uniwind": "catalog:"
+  }
+}
