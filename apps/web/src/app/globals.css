@@ -1,7 +1,16 @@
 @import 'tailwindcss';
 @import '@repo/design-tokens/theme.css';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @theme inline {
   --font-sans: var(--font-zen-kaku-gothic-new);
   --font-display: var(--font-zen-old-mincho);
+}
+
+@layer base {
+  /* Tailwind v4 の枠線の既定色は currentColor のため、トークンの区切り線の色にそろえる */
+  * {
+    @apply border-default;
+  }
 }
