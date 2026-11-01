@@ -18,6 +18,10 @@
     },
     "test": {
       "outputs": []
+    },
+    "@repo/api#test": {
+      "cache": false,
+      "env": ["TEST_DATABASE_URL"]
     }
   }
 }
