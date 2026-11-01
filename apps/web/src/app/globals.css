@@ -1,1 +1,7 @@
 @import 'tailwindcss';
+@import '@repo/design-tokens/theme.css';
+
+@theme inline {
+  --font-sans: var(--font-zen-kaku-gothic-new);
+  --font-display: var(--font-zen-old-mincho);
+}

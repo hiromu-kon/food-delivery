@@ -2,16 +2,17 @@
 
 フードデリバリーサービスのモノレポ。
 
-| ディレクトリ        | 技術                 | 対象                          |
-| ------------------- | -------------------- | ----------------------------- |
-| `apps/api`          | Hono（Node.js）      | API                           |
-| `apps/web`          | Next.js              | 注文者・店舗・運営向けの Web  |
-| `apps/customer-app` | React Native（Expo） | 注文者向けアプリ              |
-| `apps/courier-app`  | React Native（Expo） | 配達員向けアプリ              |
-| `packages/db`       | Drizzle ORM          | DB スキーマ・マイグレーション |
-| `packages/domain`   | TypeScript           | 業務ロジック（純関数）        |
-| `packages/contract` | Zod                  | API の入出力スキーマ          |
-| `packages/config`   | —                    | tsconfig / ESLint の共通設定  |
+| ディレクトリ             | 技術                 | 対象                                 |
+| ------------------------ | -------------------- | ------------------------------------ |
+| `apps/api`               | Hono（Node.js）      | API                                  |
+| `apps/web`               | Next.js              | 注文者・店舗・運営向けの Web         |
+| `apps/customer-app`      | React Native（Expo） | 注文者向けアプリ                     |
+| `apps/courier-app`       | React Native（Expo） | 配達員向けアプリ                     |
+| `packages/db`            | Drizzle ORM          | DB スキーマ・マイグレーション        |
+| `packages/domain`        | TypeScript           | 業務ロジック（純関数）               |
+| `packages/contract`      | Zod                  | API の入出力スキーマ                 |
+| `packages/config`        | —                    | tsconfig / ESLint の共通設定         |
+| `packages/design-tokens` | Tailwind CSS v4      | 色・文字・余白などのデザイントークン |
 
 要件定義は [docs/requirements/](docs/requirements/overview.md)、仕様は [docs/specs/](docs/specs/README.md)、設計の理由は [docs/architecture.md](docs/architecture.md)、何をどこに置くかは各ディレクトリの `CLAUDE.md` と `.claude/rules/` にまとめている。
 
@@ -46,7 +47,8 @@ food-delivery/
 │  ├─ db/
 │  ├─ domain/
 │  ├─ contract/
-│  └─ config/
+│  ├─ config/
+│  └─ design-tokens/
 ├─ scripts/                       構成・依存の検査
 ├─ compose.yaml                   ローカルの PostgreSQL
 ├─ pnpm-workspace.yaml            ワークスペースと依存バージョン（catalog）

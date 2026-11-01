@@ -1,0 +1,117 @@
+/*
+ * Web とアプリ（Uniwind）の両方が読み込む。名前と用途は docs/design/tokens.md。
+ * 書体は Web とアプリで読み込み方が違うため、ここでは決めず各アプリの CSS で決める。
+ * 単位は px にする。React Native は rem を解釈できない。
+ */
+
+@theme {
+  /* 既定の色や大きさを消し、トークン以外の値をクラスで書けないようにする */
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+
+  /* プリミティブは名前空間を Tailwind の外（--palette-*）に置き、クラスにならないようにする */
+  --palette-white: #ffffff;
+  --palette-indigo-50: #eef2f8;
+  --palette-indigo-100: #dce4f0;
+  --palette-indigo-200: #b9c8df;
+  --palette-indigo-300: #8fa6c8;
+  --palette-indigo-400: #5f7da8;
+  --palette-indigo-500: #3a5a88;
+  --palette-indigo-600: #2a4a74;
+  --palette-indigo-700: #1f3b63;
+  --palette-indigo-800: #172d4c;
+  --palette-indigo-900: #0f1f36;
+  --palette-gray-50: #f6f7f9;
+  --palette-gray-100: #edeff2;
+  --palette-gray-200: #e2e5ea;
+  --palette-gray-300: #c9ced6;
+  --palette-gray-400: #a3aab5;
+  --palette-gray-500: #7d8592;
+  --palette-gray-600: #66707c;
+  --palette-gray-700: #4a525d;
+  --palette-gray-800: #2f353d;
+  --palette-gray-900: #1d2126;
+  --palette-yellow-100: #fdf1c7;
+  --palette-yellow-300: #f8d25a;
+  --palette-yellow-500: #f2b705;
+  --palette-yellow-700: #7a5a00;
+  --palette-red-100: #fbecea;
+  --palette-red-500: #c93a2b;
+  --palette-red-700: #9b2a1e;
+  --palette-green-100: #e8f4ec;
+  --palette-green-500: #2e7d4f;
+  --palette-green-700: #1f5a38;
+}
+
+/* --color-* ではなく用途別の名前空間に置き、bg-bg-base のような重複した名前を避ける */
+@theme inline {
+  --background-color-base: var(--palette-white);
+  --background-color-subtle: var(--palette-gray-50);
+  --background-color-brand: var(--palette-indigo-700);
+  --background-color-brand-hover: var(--palette-indigo-800);
+  --background-color-brand-subtle: var(--palette-indigo-50);
+  --background-color-disabled: var(--palette-gray-100);
+  --background-color-accent: var(--palette-yellow-500);
+  --background-color-danger: var(--palette-red-500);
+  --background-color-danger-hover: var(--palette-red-700);
+  --background-color-danger-subtle: var(--palette-red-100);
+  --background-color-success-subtle: var(--palette-green-100);
+  --background-color-warning-subtle: var(--palette-yellow-100);
+
+  --text-color-primary: var(--palette-gray-900);
+  --text-color-secondary: var(--palette-gray-600);
+  --text-color-disabled: var(--palette-gray-400);
+  --text-color-on-brand: var(--palette-white);
+  --text-color-on-brand-subtle: var(--palette-indigo-200);
+  --text-color-brand: var(--palette-indigo-700);
+  --text-color-danger: var(--palette-red-700);
+  --text-color-success: var(--palette-green-700);
+  --text-color-warning: var(--palette-yellow-700);
+
+  --border-color-default: var(--palette-gray-200);
+  --border-color-strong: var(--palette-gray-300);
+  --border-color-focus: var(--palette-indigo-500);
+  --border-color-danger: var(--palette-red-500);
+}
+
+@theme {
+  --text-display: 30px;
+  --text-display--line-height: 1.3;
+  --text-display--font-weight: 700;
+  --text-heading-l: 22px;
+  --text-heading-l--line-height: 1.4;
+  --text-heading-l--font-weight: 700;
+  --text-heading-m: 18px;
+  --text-heading-m--line-height: 1.4;
+  --text-heading-m--font-weight: 700;
+  --text-body-l: 16px;
+  --text-body-l--line-height: 1.6;
+  --text-body-l--font-weight: 500;
+  --text-body-m: 14px;
+  --text-body-m--line-height: 1.6;
+  --text-body-m--font-weight: 400;
+  --text-body-s: 12px;
+  --text-body-s--line-height: 1.6;
+  --text-body-s--font-weight: 400;
+  --text-label-l: 16px;
+  --text-label-l--line-height: 1.2;
+  --text-label-l--font-weight: 700;
+  --text-label-m: 14px;
+  --text-label-m--line-height: 1.2;
+  --text-label-m--font-weight: 700;
+  --text-label-s: 11px;
+  --text-label-s--line-height: 1.2;
+  --text-label-s--font-weight: 700;
+
+  --spacing: 4px;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-raised: 0 6px 16px rgba(15, 31, 54, 0.18);
+  --shadow-overlay: 0 12px 32px rgba(15, 31, 54, 0.24);
+}

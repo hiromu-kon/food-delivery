@@ -1,7 +1,7 @@
 export default function HomePage() {
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-bold">Food Delivery</h1>
+      <h1 className="text-display text-brand font-display">Food Delivery</h1>
     </main>
   );
 }
