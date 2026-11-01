@@ -15,6 +15,7 @@
     "@repo/contract": "workspace:*",
     "@repo/design-tokens": "workspace:*",
     "@repo/domain": "workspace:*",
+    "@tanstack/react-table": "catalog:",
     "class-variance-authority": "catalog:",
     "cn": "catalog:",
     "hono": "catalog:",
