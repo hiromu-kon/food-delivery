@@ -27,10 +27,17 @@ module.exports = {
       to: { path: '^(packages/(domain|contract)/|apps/)' },
     },
     {
-      name: 'contract-imports-domain-types-only',
+      name: 'contract-cannot-import-apps',
       severity: 'error',
       from: { path: '^packages/contract/' },
-      to: { path: '^(packages/db/|apps/)' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'contract-db-is-type-only',
+      comment: 'レスポンスの型は DB から導出するが、DB の実装をクライアントに取り込まない',
+      severity: 'error',
+      from: { path: '^packages/contract/' },
+      to: { path: '^packages/db/', dependencyTypesNot: ['type-only'] },
     },
     {
       name: 'clients-cannot-touch-db',
