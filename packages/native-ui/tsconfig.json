@@ -1,0 +1,7 @@
+{
+  "extends": ["expo/tsconfig.base", "@repo/config/tsconfig/base.json"],
+  "compilerOptions": {
+    "types": ["uniwind/types"]
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,13 @@
+/*
+ * アプリの global.css が読み込む。部品のクラスを Tailwind に拾わせ、書体の名前を決める。
+ * React Native は 1 つの書体の太さを切り替えられず、太さごとに別の書体として読み込むため、太さごとに名前を分ける。
+ * 名前は src/fonts.ts で読み込む書体の名前と同じにする。
+ */
+@source './src';
+
+@theme {
+  --font-sans: 'ZenKakuGothicNew_400Regular';
+  --font-sans-medium: 'ZenKakuGothicNew_500Medium';
+  --font-sans-bold: 'ZenKakuGothicNew_700Bold';
+  --font-display: 'ZenOldMincho_700Bold';
+}
