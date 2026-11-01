@@ -42,14 +42,19 @@ DB のカラムを変えると、contract・API・クライアントの型が順
 | ------------------- | ------------------------------------------------------------ |
 | `apps/api`          | `packages/db` / `packages/domain` / `packages/contract`      |
 | web / アプリ        | `packages/domain` / `packages/contract`、`AppType`（型のみ） |
-| `packages/contract` | `packages/domain`                                            |
+| `packages/contract` | `packages/domain` と、型だけの `packages/db`                 |
 | `packages/domain`   | 他の packages / apps は不可。DB・HTTP・UI のライブラリも不可 |
 | `packages/db`       | 他の packages / apps は不可                                  |
 
 - `packages/domain` を純粋に保つのは、web / アプリからも表示用の計算に使えるようにするため。DB や Hono に依存すると、クライアントのバンドルに入れられなくなる。
 - web / アプリから `packages/db` を import できないようにして、クライアントが DB に直接触る経路をなくしている。
+- contract は DB の行から公開する項目の型を導出するため、`import type` だけ DB を参照できる。DB の実装を読み込む import は dependency-cruiser で禁止する。
 
 検査は `.dependency-cruiser.cjs`（ルールごとの理由は各ルールの `comment`）。依存を `package.json` に宣言していない import は、pnpm の構成上解決できないため typecheck で止まる。
+
+## 認証
+
+セッション・パスワードのハッシュ・メール確認と再設定は Better Auth に任せる。Hono のルートで入力と公開レスポンスを型付けし、Better Auth の HTTP ハンドラーへ渡すことで Origin 検査と試行回数制限も通す。アカウントの停止・ロール・注文時のメール確認はドメインのルールと API のミドルウェアで判定する。詳細は [認証の仕様](specs/auth.md) にまとめる。
 
 ## ディレクトリ名
 
