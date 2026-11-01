@@ -23,6 +23,12 @@ MVP の画面に必要な部品だけを作る。見た目・状態・使い分�
 
 アプリの通知は、両アプリの layout に置いた `ToastProvider` と `useToast()` の `show`・`dismiss` で表示・消去する。通知は最新の 1 件に置き換え、既定で 4 秒後に消す。Android の操作時間の設定を反映し、ホームインジケーターを避けて表示する。`AppHeader` と `TabBar` のセーフエリアは画面側で確保する。
 
+注文者アプリ専用の部品は `apps/customer-app/src/components/` の `store/`・`cart/`・`order/`・`sheet/` に置く。開発用画面 `/dev/customer-components` で各状態と操作を確認できる。写真なし・画像読み込み失敗時は、灰色の面と料理アイコンにする。受付停止中の店舗もメニューは見られるが、商品追加は呼び出し側で無効にする。
+
+`QuantityStepper` の数量変更先は `packages/domain` の `getCartQuantityControls` から受け取る。数量 1 からの削除は `onRemove`、増減は `onQuantityChange` で呼び出し側に通知する。`CartBar` の点数と小計は呼び出し側の値を表示し、0 点のときは表示しない。`OrderSteps` はキャンセル時に進行の線を出さず、キャンセルのラベルを出す。
+
+`BottomSheet` は開閉状態を呼び出し側が管理する。閉じるボタン・背面タップ・端末の戻る操作・ハンドルの下方向のドラッグで閉じ、長い内容は中でスクロールする。セーフエリアと入力時のキーボードの余白は部品内で確保する。
+
 | Penpot       | 実装                                                                                                       |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
 | Button       | Button。種類は Penpot の名前にした（shadcn の `default` `outline` `destructive` は使わない）               |
