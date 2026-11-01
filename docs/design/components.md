@@ -17,6 +17,12 @@ MVP の画面に必要な部品だけを作る。見た目・状態・使い分�
 
 実装は shadcn/ui（アプリは React Native Reusables）を土台にする（[docs/architecture.md](../architecture.md)）。Web の部品は shadcn の CLI が置く `apps/web/src/components/ui/` に置く。名前が同じもの（`Select` `Checkbox` `Tabs` など）はそのまま使い、shadcn にない部品（`StoreNoren` `MenuItem` `OrderSteps` など）は独自に作る。名前や種類が shadcn と違うものは、次のように対応させる。
 
+アプリ共通の部品は `packages/native-ui/src/components/` に置き、`@repo/native-ui/status-label` のように読み込む。表示・お知らせ・移動の部品は、注文者アプリの開発用画面 `/dev/display-components` で操作できる。
+
+アプリの確認ダイアログは React Native の `Modal` を使い、背後の操作と読み上げを遮断する。開閉と処理中の状態は呼び出し側が管理し、実行ボタンを押しても自動では閉じない。処理が成功したときに閉じることで、失敗時に確認内容を残せる。画面内の `Tabs` は選択値と内容を受け取り、選択した内容だけを表示する。
+
+アプリの通知は、両アプリの layout に置いた `ToastProvider` と `useToast()` の `show`・`dismiss` で表示・消去する。通知は最新の 1 件に置き換え、既定で 4 秒後に消す。Android の操作時間の設定を反映し、ホームインジケーターを避けて表示する。`AppHeader` と `TabBar` のセーフエリアは画面側で確保する。
+
 | Penpot       | 実装                                                                                                       |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
 | Button       | Button。種類は Penpot の名前にした（shadcn の `default` `outline` `destructive` は使わない）               |
