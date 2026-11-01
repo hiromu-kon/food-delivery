@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Zen_Kaku_Gothic_New, Zen_Old_Mincho } from 'next/font/google';
 
+import { Toaster } from '@/components/ui/sonner';
+
 import './globals.css';
 
 // 日本語の字形は unicode-range で分割配信されるため、subsets で絞れない。preload を切って必要な分だけ読ませる。
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     >
       <body className="bg-base text-body-m text-primary flex min-h-full flex-col font-sans">
         {children}
+        <Toaster />
       </body>
     </html>
   );

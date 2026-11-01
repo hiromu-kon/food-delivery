@@ -35,6 +35,7 @@
 | `color.bg.danger-subtle`     | `bg-danger-subtle`     | エラーのお知らせ                               |
 | `color.bg.success-subtle`    | `bg-success-subtle`    | 完了のお知らせ、配達完了のラベル               |
 | `color.bg.warning-subtle`    | `bg-warning-subtle`    | 注意のお知らせ、受付待ちのラベル               |
+| `color.bg.scrim`             | `bg-scrim`             | ダイアログ・シートの後ろの幕                   |
 | `color.text.primary`         | `text-primary`         | 本文・見出し                                   |
 | `color.text.secondary`       | `text-secondary`       | 補足、ラベル                                   |
 | `color.text.disabled`        | `text-disabled`        | 無効な文字                                     |

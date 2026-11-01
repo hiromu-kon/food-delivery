@@ -23,6 +23,7 @@
     "radix-ui": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "sonner": "catalog:",
     "tw-animate-css": "catalog:",
     "zod": "catalog:"
   },
