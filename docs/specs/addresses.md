@@ -24,7 +24,7 @@
 | PATCH  | `/addresses/:id` | 200 `{ address: ... }`                             |
 | DELETE | `/addresses/:id` | 200 `{ status: true }`                             |
 
-住所の公開項目は `id`（UUID）、`address`、`building`、`deliveryNote`、`latitude`、`longitude`。所有者IDは返さない。PATCHは指定された項目だけを変更し、未指定項目は保持する。空のPATCHは400。住所が変わらなければ地図APIを呼ばず、住所変更時は測位が成功した後に住所と座標を同一SQLで更新する。
+住所の公開項目は `id`（UUID）、`address`、`building`、`deliveryNote`、`latitude`、`longitude`。所有者IDは返さない。PATCHは指定された項目だけを変更し、未指定項目は保持する。空のPATCHは400。住所を省略した部分更新では地図APIを呼ばない。住所を明示した場合は保存済み住所と同じ文字列でも必ず再測位し、成功した後に住所と座標を同一SQLで更新する。同時更新でも住所だけが古い値に戻って別の住所の座標と組み合わされることを防ぐ。
 
 全ルートで既存のセッション認証を使う。Cookie認証による変更は既存のOrigin検査も適用する。すべてのDB参照・更新・削除に所有者条件を付け、他人の住所と存在しない住所は同じ404にする。他人の住所の変更では地図APIも呼ばない。キャッシュは `no-store`。
 
@@ -42,7 +42,7 @@
 
 OpenCage Geocoding API を標準 `fetch` で呼ぶ。公式仕様は[APIドキュメント](https://opencagedata.com/api)を参照。公式の Caching 節で座標の永続保存が許可されているため採用した。
 
-- `OPENCAGE_API_KEY`：サーバー専用キー。未設定時でも一覧・取得・削除・住所が変わらない部分更新は可能。登録・住所変更は設定エラーで失敗し、仮の座標は使わない。
+- `OPENCAGE_API_KEY`：サーバー専用キー。未設定時でも一覧・取得・削除・住所を省略した部分更新は可能。登録・住所を明示した更新は設定エラーで失敗し、仮の座標は使わない。
 - `GEOCODING_TIMEOUT_MS`：応答本文の受信を含む期限。既定5000ms、1〜30000ms。
 - 送信先は `https://api.opencagedata.com/geocode/v1/json` 固定。`countrycode=jp`、`language=ja`、`limit=2`、`no_annotations=1`、`no_record=1` を指定する。リダイレクトと自動再試行は行わない。
 - HTTP成功かつ本文 `status.code=200`、結果が1件で `components._type=building`、`country_code=jp` の場合だけ座標を採用する。道路・市区町村などの中心点や複数候補は不明住所として拒否する。緯度は−90〜90、経度は−180〜180の有限な数値に限る。
