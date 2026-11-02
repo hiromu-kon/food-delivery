@@ -5,6 +5,7 @@ import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
 
 import { createAddressRoutes } from './features/addresses/addresses.routes';
+import { createStoreRoutes } from './features/stores/stores.routes';
 import { createOpenCageGeocoder } from './integrations/maps/opencage';
 import type { Geocoder } from './integrations/maps/geocoder';
 import { healthRoutes } from './features/health/health.routes';
@@ -44,6 +45,7 @@ export function createApp(options: {
     .onError(errorHandler)
     .notFound((c) => c.json({ code: 'NOT_FOUND', message: '見つかりません' }, 404))
     .route('/health', healthRoutes)
+    .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
     .route('/auth', createAuthRoutes(options.auth, options.db, options.config))
     .route(
       '/addresses',

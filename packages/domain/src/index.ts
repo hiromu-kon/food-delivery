@@ -5,3 +5,4 @@ export * from './cart/quantity';
 export * from './cart/cart';
 export * from './display/format';
 export * from './order/progress';
+export * from './geo/distance';

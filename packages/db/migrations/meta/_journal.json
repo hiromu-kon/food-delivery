@@ -15,6 +15,13 @@
       "when": 1793626612131,
       "tag": "0001_cold_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793629173961,
+      "tag": "0002_unknown_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }
