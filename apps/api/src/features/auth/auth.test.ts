@@ -248,6 +248,7 @@ describe('認証 API（PostgreSQL）', () => {
       baseURL: 'https://api.example.test',
       webURL: 'https://web.example.test',
       secureCookies: true,
+      cookieDomain: 'example.test',
     };
     const secureAuth = createAuthService(db, { send: () => Promise.resolve() }, secureConfig);
     const secureApp = createApp({
@@ -264,6 +265,7 @@ describe('認証 API（PostgreSQL）', () => {
     expect(login.status).toBe(200);
     expect(login.headers.get('set-cookie')).toContain('__Secure-');
     expect(login.headers.get('set-cookie')).toContain('; Secure');
+    expect(login.headers.get('set-cookie')).toContain('Domain=example.test');
     expect(login.headers.get('set-cookie')).toContain('HttpOnly');
   });
   it('期限切れのメール確認リンクを拒否する', async () => {
