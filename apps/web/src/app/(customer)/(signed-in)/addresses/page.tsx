@@ -1,21 +1,34 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { addressSchema, type DeliveryAddress } from '@repo/contract';
+import { redirect } from 'next/navigation';
+import { z } from 'zod';
+import { createServerApiClient } from '@/api/server';
+import { AddressesManager } from '@/features/addresses/addresses-manager';
+import { addressErrorMessage, assertAddressSuccess } from '@/features/addresses/address-state';
 import { AuthShell } from '@/features/auth/auth-shell';
 import { requireCustomer } from '@/features/auth/session';
 
-// お届け先の一覧と編集は F-02（#11）で実装する。
 export const instant = false;
 
 export default async function AddressesPage() {
   await requireCustomer();
+  let addresses: DeliveryAddress[] = [];
+  let error: string | null = null;
+  const client = await createServerApiClient();
+  let response: Response | undefined;
+  try {
+    response = await client.addresses.$get();
+    assertAddressSuccess(response);
+    addresses = z
+      .object({ addresses: z.array(addressSchema) })
+      .parse(await response.json()).addresses;
+  } catch (cause) {
+    error = addressErrorMessage(cause);
+  }
+  if (response?.status === 401) redirect('/login');
+  if (response?.status === 403) redirect('/access-denied');
   return (
-    <AuthShell title="お届け先の管理">
-      <div className="space-y-6">
-        <p className="text-body-m text-secondary">お届け先の登録・変更は現在準備中です。</p>
-        <Button asChild variant="secondary" className="w-full">
-          <Link href="/account">アカウントへ戻る</Link>
-        </Button>
-      </div>
+    <AuthShell title="お届け先の管理" description="住所・建物名・配達メモを登録できます。">
+      <AddressesManager initialAddresses={addresses} initialError={error} />
     </AuthShell>
   );
 }
