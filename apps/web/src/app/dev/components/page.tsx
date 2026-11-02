@@ -1,5 +1,6 @@
 import { orderStatuses } from '@repo/domain';
 import { ArrowLeftIcon, ReceiptTextIcon, StoreIcon, UtensilsCrossedIcon } from 'lucide-react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import {
@@ -111,6 +112,10 @@ export default function ComponentCatalogPage() {
           コンポーネント」と見比べるためのページ。ホバーとフォーカスは操作して確かめる。
         </p>
       </div>
+
+      <Link href="/dev/customer-components" className="text-brand underline">
+        注文者向けのコンポーネントを見る
+      </Link>
 
       <Section title="操作">
         <Block

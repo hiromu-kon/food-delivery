@@ -1,0 +1,3 @@
+// 実店舗の写真と混同しないよう、画像の読み込みの確認には図形だけの画像を使う
+export const samplePhotoUrl =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAQklEQVR4nGP4tJ0VK5K3TsaKSFXPMGrBqAVDwAJqGYRL/agFoxYMBQuoZRAu9aMWjFowFCyglkG41I9aMGrBELAAAHYM1j2lkKTEAAAAAElFTkSuQmCC';

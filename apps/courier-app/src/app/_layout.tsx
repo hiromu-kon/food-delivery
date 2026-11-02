@@ -1,7 +1,9 @@
 import { useAppFonts } from '@repo/native-ui/fonts';
+import { ToastProvider } from '@repo/native-ui/toast';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import '../global.css';
 
@@ -14,10 +16,12 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-      <Stack />
-      <StatusBar style="auto" />
-      <PortalHost />
-    </>
+    <SafeAreaProvider>
+      <ToastProvider>
+        <Stack />
+        <StatusBar style="auto" />
+        <PortalHost />
+      </ToastProvider>
+    </SafeAreaProvider>
   );
 }
