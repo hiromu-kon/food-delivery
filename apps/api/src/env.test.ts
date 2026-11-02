@@ -8,6 +8,13 @@ const base = {
 };
 
 describe('loadEnv', () => {
+  it('地図APIのキーは任意でタイムアウトは1〜30000msに制限する', () => {
+    expect(loadEnv(base).OPENCAGE_API_KEY).toBeUndefined();
+    expect(loadEnv(base).GEOCODING_TIMEOUT_MS).toBe(5000);
+    for (const value of ['0', '30001', 'NaN'])
+      expect(() => loadEnv({ ...base, GEOCODING_TIMEOUT_MS: value })).toThrow();
+    expect(() => loadEnv({ ...base, OPENCAGE_API_KEY: '  ' })).toThrow();
+  });
   it('false の SMTP 設定を true に変換しない', () => {
     expect(loadEnv({ ...base, SMTP_SECURE: 'false' }).SMTP_SECURE).toBe(false);
   });

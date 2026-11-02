@@ -4,6 +4,9 @@ import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
 
+import { createAddressRoutes } from './features/addresses/addresses.routes';
+import { createOpenCageGeocoder } from './integrations/maps/opencage';
+import type { Geocoder } from './integrations/maps/geocoder';
 import { healthRoutes } from './features/health/health.routes';
 import { createAuthRoutes } from './features/auth/auth.routes';
 import type { AuthConfig, AuthService } from './features/auth/auth.service';
@@ -12,6 +15,7 @@ import { errorHandler } from './middleware/error-handler';
 
 export function createApp(options: {
   auth: AuthService;
+  geocoder?: Geocoder;
   db: Db;
   config: AuthConfig;
   getClientIp: (c: Context<AuthEnv>) => string | undefined;
@@ -40,5 +44,14 @@ export function createApp(options: {
     .onError(errorHandler)
     .notFound((c) => c.json({ code: 'NOT_FOUND', message: '見つかりません' }, 404))
     .route('/health', healthRoutes)
-    .route('/auth', createAuthRoutes(options.auth, options.db, options.config));
+    .route('/auth', createAuthRoutes(options.auth, options.db, options.config))
+    .route(
+      '/addresses',
+      createAddressRoutes(
+        options.auth,
+        options.db,
+        options.config,
+        options.geocoder ?? createOpenCageGeocoder(),
+      ),
+    );
 }

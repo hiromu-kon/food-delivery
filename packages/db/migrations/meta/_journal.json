@@ -8,6 +8,13 @@
       "when": 1793540099179,
       "tag": "0000_youthful_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793626612131,
+      "tag": "0001_cold_giant_man",
+      "breakpoints": true
     }
   ]
 }

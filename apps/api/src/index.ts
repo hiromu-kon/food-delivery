@@ -5,6 +5,7 @@ import { createDb } from '@repo/db';
 import { createApp } from './app';
 import { loadEnv } from './env';
 import { createAuthService } from './features/auth/auth.service';
+import { createOpenCageGeocoder } from './integrations/maps/opencage';
 import { createSmtpSender } from './integrations/email/smtp';
 
 const env = loadEnv();
@@ -26,7 +27,16 @@ const email = createSmtpSender({
   password: env.SMTP_PASSWORD,
 });
 const auth = createAuthService(db, email, config);
-const app = createApp({ auth, db, config, getClientIp: (c) => getConnInfo(c).remote.address });
+const app = createApp({
+  auth,
+  db,
+  config,
+  geocoder: createOpenCageGeocoder({
+    apiKey: env.OPENCAGE_API_KEY,
+    timeoutMs: env.GEOCODING_TIMEOUT_MS,
+  }),
+  getClientIp: (c) => getConnInfo(c).remote.address,
+});
 
 serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`API listening on http://localhost:${info.port}`);
