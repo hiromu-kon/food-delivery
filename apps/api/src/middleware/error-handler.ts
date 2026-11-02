@@ -4,6 +4,8 @@ import type { ErrorHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { HTTPException } from 'hono/http-exception';
 
+import { GeocodingError } from '../integrations/maps/geocoder';
+
 const statusByDomainErrorCode = {
   NOT_FOUND: 404,
   UNAUTHORIZED: 401,
@@ -13,6 +15,19 @@ const statusByDomainErrorCode = {
 } as const satisfies Record<DomainErrorCode, ContentfulStatusCode>;
 
 export const errorHandler: ErrorHandler = (error, c) => {
+  if (error instanceof GeocodingError) {
+    if (error.code === 'ADDRESS_NOT_FOUND')
+      return c.json(
+        { code: error.code, message: '住所を特定できません。番地まで確認してください' },
+        422,
+      );
+    if (error.code === 'GEOCODING_NOT_CONFIGURED')
+      return c.json({ code: error.code, message: '地図サービスが設定されていません' }, 503);
+    return c.json(
+      { code: error.code, message: '住所を確認できませんでした。時間をおいてお試しください' },
+      503,
+    );
+  }
   if (error instanceof DomainError) {
     const body: ApiError = { code: error.code, message: error.message };
     return c.json(body, statusByDomainErrorCode[error.code]);
