@@ -27,6 +27,8 @@ export class SessionController {
   private state: SessionState = { status: 'loading' };
   private token: string | null = null;
   private generation = 0;
+  // 同じセッションの再確認中はAPI処理を維持し、ログインの切替と失効で無効にする。
+  private sessionEpoch = 0;
   private storageQueue: Promise<unknown> = Promise.resolve();
   private listeners = new Set<() => void>();
   constructor(
@@ -50,6 +52,7 @@ export class SessionController {
     return result;
   }
   private async discard(generation: number, message?: string) {
+    this.sessionEpoch++;
     this.token = null;
     try {
       await this.store(() => this.storage.clear());
@@ -71,6 +74,7 @@ export class SessionController {
       );
   }
   restore = async () => {
+    this.sessionEpoch++;
     const generation = ++this.generation;
     this.publish({ status: 'loading' });
     let token: string | null;
@@ -126,6 +130,39 @@ export class SessionController {
       }
     }
   }
+  // API 層だけが利用する。token は公開 state や画面の props へ格納しない。
+  authenticatedRequest = async <T>(operation: (token: string) => Promise<T>): Promise<T> => {
+    const epoch = this.sessionEpoch;
+    const token = this.token;
+    if (this.state.status !== 'authenticated' || !token)
+      throw new AuthRequestError('ログインを確認してください。', 'STALE_SESSION');
+    try {
+      const result = await operation(token);
+      if (epoch !== this.sessionEpoch || token !== this.token)
+        throw new AuthRequestError(
+          'ログイン状態が変わりました。再試行してください。',
+          'STALE_SESSION',
+        );
+      return result;
+    } catch (error) {
+      if (epoch !== this.sessionEpoch || token !== this.token)
+        throw new AuthRequestError(
+          'ログイン状態が変わりました。再試行してください。',
+          'STALE_SESSION',
+        );
+      if (error instanceof AuthRequestError && [401, 403].includes(error.status)) {
+        const invalidated = ++this.generation;
+        this.publish({ status: 'loading' });
+        await this.discard(
+          invalidated,
+          error.status === 401
+            ? 'ログインの有効期限が切れました。もう一度ログインしてください。'
+            : error.message,
+        );
+      }
+      throw error;
+    }
+  };
   refresh = async () => {
     if (this.state.status !== 'authenticated' || !this.token) return;
     const token = this.token;
@@ -135,6 +172,7 @@ export class SessionController {
     await this.validate(token, generation);
   };
   login = async (credentials: Credentials) => {
+    this.sessionEpoch++;
     const generation = ++this.generation;
     this.token = null;
     let issuedToken: string | undefined;
@@ -175,6 +213,7 @@ export class SessionController {
     await this.transport.signOut(token).catch(() => undefined);
   }
   logout = async () => {
+    this.sessionEpoch++;
     const generation = ++this.generation;
     const token = this.token;
     this.token = null;
