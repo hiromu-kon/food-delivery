@@ -149,7 +149,7 @@ describe('お届け先 API（PostgreSQL + HTTP adapter）', () => {
     expect(await db.select().from(addresses)).toEqual([]);
   });
 
-  it('R-15 PATCHは指定項目だけを変更し住所が同じなら地図APIを呼ばない', async () => {
+  it('R-15 PATCHは住所を省略すると地図APIを呼ばず指定項目だけを変更する', async () => {
     const cookie = await cookieFor((await seed()).token);
     const saved = await create(cookie);
     http.mockClear();
@@ -157,10 +157,7 @@ describe('お届け先 API（PostgreSQL + HTTP adapter）', () => {
       (await request(`/${saved.id}`, 'PATCH', { deliveryNote: '玄関前で呼んでください' }, cookie))
         .status,
     ).toBe(200);
-    expect(
-      (await request(`/${saved.id}`, 'PATCH', { address: input.address, building: '' }, cookie))
-        .status,
-    ).toBe(200);
+    expect((await request(`/${saved.id}`, 'PATCH', { building: '' }, cookie)).status).toBe(200);
     expect((await request(`/${saved.id}`, 'PATCH', {}, cookie)).status).toBe(400);
     expect((await request(`/${saved.id}`, 'PATCH', { userId: 'other' }, cookie)).status).toBe(400);
     expect(http).not.toHaveBeenCalled();
@@ -169,6 +166,24 @@ describe('お届け先 API（PostgreSQL + HTTP adapter）', () => {
       building: '',
       deliveryNote: '玄関前で呼んでください',
     });
+  });
+
+  it('明示された住所は保存済み住所と同じでも再測位した座標と一緒に更新する', async () => {
+    const cookie = await cookieFor((await seed()).token);
+    const saved = await create(cookie);
+    http.mockClear();
+    http.mockResolvedValueOnce(
+      Response.json({
+        ...success,
+        results: [{ ...success.results[0], geometry: { lat: 35.68, lng: 139.76 } }],
+      }),
+    );
+    const response = await request(`/${saved.id}`, 'PATCH', { address: saved.address }, cookie);
+    expect(response.status).toBe(200);
+    expect(http).toHaveBeenCalledTimes(1);
+    const expected = { ...saved, latitude: 35.68, longitude: 139.76 };
+    expect(await response.json()).toEqual({ address: expected });
+    expect((await db.select().from(addresses))[0]).toMatchObject(expected);
   });
 
   it('他人の一覧・取得・変更・削除で行を露出せず地図APIも呼ばない', async () => {

@@ -25,10 +25,8 @@ export function createAddressService(db: Db, geocoder: Geocoder) {
       // 他人の行や存在しない行は地図 API を呼ぶ前に同じ404にする。
       const existing = await repository.find(userId, id);
       if (!existing) throw notFound();
-      const coordinates =
-        input.address !== undefined && input.address !== existing.address
-          ? await geocoder.geocode(input.address)
-          : {};
+      // 同時更新で住所だけを上書きしないよう、明示された住所は必ず座標と保存する。
+      const coordinates = input.address !== undefined ? await geocoder.geocode(input.address) : {};
       const changes = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined),
       );
