@@ -223,6 +223,9 @@ export default function DisplayComponentCatalogScreen() {
       <Button variant="ghost" onPress={() => router.push('/dev/components')}>
         操作と入力の部品を見る
       </Button>
+      <Button variant="ghost" onPress={() => router.push('/dev/customer-components')}>
+        注文者の部品を見る
+      </Button>
       <Tabs
         value={section}
         onValueChange={setSection}
