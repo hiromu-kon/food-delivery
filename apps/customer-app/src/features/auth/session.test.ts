@@ -228,3 +228,78 @@ describe('注文者アプリのセッション', () => {
     expect(app.transport.signOut).toHaveBeenCalledWith('renewed');
   });
 });
+
+describe('認証済みAPI利用口', () => {
+  it.each([401, 403])('%s で保存tokenとプロフィールを失効させる', async (status) => {
+    const app = setup('signed');
+    await app.controller.restore();
+    const operation = vi.fn().mockRejectedValue(new AuthRequestError('利用不可', '', status));
+    await expect(app.controller.authenticatedRequest(operation)).rejects.toMatchObject({ status });
+    expect(operation).toHaveBeenCalledWith('signed');
+    expect(app.saved()).toBeNull();
+    expect(app.controller.getSnapshot().status).toBe('anonymous');
+  });
+  it('ログアウト前の成功応答は消費させない', async () => {
+    const app = setup('signed');
+    await app.controller.restore();
+    const gate = deferred<string>();
+    const request = app.controller.authenticatedRequest(() => gate.promise);
+    await app.controller.logout();
+    gate.resolve('old address');
+    await expect(request).rejects.toMatchObject({ code: 'STALE_SESSION' });
+    expect(app.controller.getSnapshot().status).toBe('anonymous');
+  });
+  it('古い要求の401で新しいログインを失効させない', async () => {
+    const app = setup('old');
+    await app.controller.restore();
+    const gate = deferred<void>();
+    const request = app.controller.authenticatedRequest(async () => {
+      await gate.promise;
+      throw new AuthRequestError('expired', '', 401);
+    });
+    await app.controller.login(credentials);
+    gate.resolve();
+    await expect(request).rejects.toMatchObject({ code: 'STALE_SESSION' });
+    expect(app.controller.getSnapshot().status).toBe('authenticated');
+    expect(app.saved()).toBe('signed-token');
+  });
+  it('同じセッションのプロフィール再確認と住所取得を並行できる', async () => {
+    const app = setup('signed');
+    await app.controller.restore();
+    const gate = deferred<string>();
+    const request = app.controller.authenticatedRequest(() => gate.promise);
+    await app.controller.refresh();
+    gate.resolve('address');
+    await expect(request).resolves.toBe('address');
+  });
+  it('住所要求の401が進行中のプロフィール再確認も無効にする', async () => {
+    const app = setup('signed');
+    await app.controller.restore();
+    const requestGate = deferred<void>();
+    const profileGate = deferred<{ user: AuthUser }>();
+    const request = app.controller.authenticatedRequest(async () => {
+      await requestGate.promise;
+      throw new AuthRequestError('expired', '', 401);
+    });
+    app.transport.me.mockReturnValueOnce(profileGate.promise);
+    const refresh = app.controller.refresh();
+    requestGate.resolve();
+    await expect(request).rejects.toMatchObject({ status: 401 });
+    profileGate.resolve({ user });
+    await refresh;
+    expect(app.controller.getSnapshot().status).toBe('anonymous');
+    expect(app.saved()).toBeNull();
+  });
+  it('通信障害ではセッションを捨てず、未認証時はAPIを呼ばない', async () => {
+    const app = setup('signed');
+    const operation = vi.fn().mockRejectedValue(new TypeError('offline'));
+    await expect(app.controller.authenticatedRequest(operation)).rejects.toMatchObject({
+      code: 'STALE_SESSION',
+    });
+    expect(operation).not.toHaveBeenCalled();
+    await app.controller.restore();
+    await expect(app.controller.authenticatedRequest(operation)).rejects.toThrow('offline');
+    expect(app.saved()).toBe('signed');
+    expect(app.controller.getSnapshot().status).toBe('authenticated');
+  });
+});
