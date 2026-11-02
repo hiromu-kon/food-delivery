@@ -12,7 +12,7 @@ import {
 import { Switch } from '@repo/native-ui/switch';
 import { Text } from '@repo/native-ui/text';
 import { TextField } from '@repo/native-ui/text-field';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
@@ -37,6 +37,7 @@ function Block({ name, children }: { name: string; children: React.ReactNode }) 
 
 // 部品を Penpot と見比べるための画面。利用者に見せないため、開発中だけ開ける
 export default function ComponentCatalogScreen() {
+  const router = useRouter();
   const [toggles, setToggles] = React.useState({ on: true, off: false });
   const [checks, setChecks] = React.useState({ on: true, off: false });
 
@@ -47,6 +48,9 @@ export default function ComponentCatalogScreen() {
   return (
     <ScrollView className="bg-base" contentContainerClassName="gap-8 p-4 pb-16">
       <Stack.Screen options={{ title: 'コンポーネント' }} />
+      <Button variant="ghost" onPress={() => router.push('/dev/display-components')}>
+        表示・お知らせ・移動の部品を見る
+      </Button>
       <Block name="Button">
         {(['L', 'M'] as const).map((size) =>
           buttonVariants.map((variant) => (
