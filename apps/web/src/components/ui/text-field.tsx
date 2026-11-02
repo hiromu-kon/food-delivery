@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn';
 type TextFieldProps = React.ComponentProps<typeof Input> & {
   label: string;
   helperText?: string;
-  errorMessage?: string;
+  errorMessage?: string | undefined;
 };
 
 function TextField({

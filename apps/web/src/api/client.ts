@@ -5,4 +5,6 @@ import { env } from '@/env';
 
 export const apiClient = hc<AppType>(env.NEXT_PUBLIC_API_URL, {
   init: { credentials: 'include' },
+  fetch: (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+    fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(10_000) }),
 });
