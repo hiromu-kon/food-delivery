@@ -1,4 +1,10 @@
-export const domainErrorCodes = ['NOT_FOUND'] as const;
+export const domainErrorCodes = [
+  'NOT_FOUND',
+  'UNAUTHORIZED',
+  'FORBIDDEN',
+  'ACCOUNT_DISABLED',
+  'EMAIL_NOT_VERIFIED',
+] as const;
 
 export type DomainErrorCode = (typeof domainErrorCodes)[number];
 

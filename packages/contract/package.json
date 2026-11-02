@@ -11,12 +11,14 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@repo/domain": "workspace:*"
   },
   "devDependencies": {
     "@repo/config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@repo/db": "workspace:*"
   }
 }

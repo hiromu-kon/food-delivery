@@ -1,11 +1,12 @@
 import { testClient } from 'hono/testing';
 import { describe, expect, it } from 'vitest';
 
-import { app } from '../../app';
+import { Hono } from 'hono';
+import { healthRoutes } from './health.routes';
 
 describe('GET /health', () => {
   it('API が起動していれば status: ok を返す', async () => {
-    const client = testClient(app);
+    const client = testClient(new Hono().route('/health', healthRoutes));
 
     const res = await client.health.$get();
 
