@@ -80,7 +80,7 @@ pnpm --filter @repo/db db:migrate
 
 API の認証設定は `apps/api/.env.example` を参照する。ローカルの確認メールと再設定メールは [Mailpit](http://localhost:18025) に届く（SMTP は 11025 番）。本番では `AUTH_SECRET` を生成し直し、HTTPS の `AUTH_URL`・`WEB_URL` とメール配信サービスの SMTP 接続を設定する。
 
-認証の仕様と API は [docs/specs/auth.md](docs/specs/auth.md) にある。
+認証の仕様と API、Web の画面と Cookie の配備設定は [docs/specs/auth.md](docs/specs/auth.md) にある。
 
 ## 開発
 

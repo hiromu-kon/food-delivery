@@ -13,6 +13,7 @@ export type AuthConfig = {
   webURL: string;
   secret: string;
   secureCookies: boolean;
+  cookieDomain?: string | undefined;
 };
 
 export function createAuthService(db: Db, email: EmailSender, config: AuthConfig) {
@@ -100,6 +101,9 @@ export function createAuthService(db: Db, email: EmailSender, config: AuthConfig
       disableOriginCheck: false,
       disableCSRFCheck: false,
       useSecureCookies: config.secureCookies,
+      crossSubDomainCookies: config.cookieDomain
+        ? { enabled: true, domain: config.cookieDomain }
+        : { enabled: false },
       defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', secure: config.secureCookies },
       ipAddress: { ipAddressHeaders: ['x-auth-client-ip'] },
       backgroundTasks: {

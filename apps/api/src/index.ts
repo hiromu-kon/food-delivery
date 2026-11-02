@@ -14,6 +14,7 @@ const config = {
   webURL: env.WEB_URL,
   secret: env.AUTH_SECRET,
   secureCookies: env.NODE_ENV === 'production',
+  cookieDomain: env.AUTH_COOKIE_DOMAIN,
 };
 const email = createSmtpSender({
   host: env.SMTP_HOST,

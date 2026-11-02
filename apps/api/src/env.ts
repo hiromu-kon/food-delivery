@@ -17,6 +17,11 @@ export const envSchema = z
     AUTH_URL: httpOrigin.default('http://localhost:8787'),
     WEB_URL: httpOrigin.default('http://localhost:3000'),
     AUTH_SECRET: z.string().min(32),
+    AUTH_COOKIE_DOMAIN: z
+      .string()
+      .toLowerCase()
+      .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/)
+      .optional(),
     SMTP_HOST: z.string().min(1).default('localhost'),
     SMTP_PORT: z.coerce.number().int().positive().default(11025),
     SMTP_SECURE: z.stringbool().default(false),
@@ -25,6 +30,18 @@ export const envSchema = z
     SMTP_PASSWORD: z.string().optional(),
   })
   .superRefine((value, context) => {
+    const hosts = [new URL(value.AUTH_URL).hostname, new URL(value.WEB_URL).hostname];
+    const domain = value.AUTH_COOKIE_DOMAIN;
+    if (domain && !hosts.every((host) => host === domain || host.endsWith(`.${domain}`)))
+      context.addIssue({
+        code: 'custom',
+        message: 'Cookie のドメインは Web と API の共通ドメインにしてください',
+      });
+    if (hosts[0] !== hosts[1] && !domain)
+      context.addIssue({
+        code: 'custom',
+        message: 'Web と API のホストを分ける場合は AUTH_COOKIE_DOMAIN を設定してください',
+      });
     if (Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD))
       context.addIssue({
         code: 'custom',

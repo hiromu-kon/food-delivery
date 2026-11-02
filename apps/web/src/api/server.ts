@@ -9,5 +9,6 @@ export async function createServerApiClient() {
   const cookieStore = await cookies();
   return hc<AppType>(env.NEXT_PUBLIC_API_URL, {
     headers: { cookie: cookieStore.toString() },
+    init: { cache: 'no-store', signal: AbortSignal.timeout(10_000) },
   });
 }
