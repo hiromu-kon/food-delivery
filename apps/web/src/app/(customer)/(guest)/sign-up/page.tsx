@@ -4,10 +4,7 @@ import { SignUpForm } from '@/features/auth/sign-up-form';
 export const metadata: Metadata = { title: '会員登録 | Food Delivery' };
 export default function SignUpPage() {
   return (
-    <AuthShell
-      title="会員登録"
-      description="登録後に届くメールから、メールアドレスを確認してください。"
-    >
+    <AuthShell title="会員登録" backHref="/login">
       <SignUpForm />
     </AuthShell>
   );

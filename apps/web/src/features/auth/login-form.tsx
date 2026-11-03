@@ -53,13 +53,11 @@ export function LoginForm({ verified }: { verified: boolean }) {
           required
           errorMessage={form.fields.password}
         />
-        <div className="text-body-s text-brand text-right">
-          <Link href="/forgot-password" className="underline underline-offset-4">
-            パスワードを忘れた方
-          </Link>
-        </div>
         <Button type="submit" loading={form.pending} className="w-full">
           ログインする
+        </Button>
+        <Button asChild variant="ghost" className="w-full">
+          <Link href="/forgot-password">パスワードを忘れた方</Link>
         </Button>
       </form>
       {form.error?.code === 'EMAIL_NOT_VERIFIED' && (
@@ -75,7 +73,7 @@ export function LoginForm({ verified }: { verified: boolean }) {
         </div>
       )}
       <div className="mt-8 space-y-3 border-t pt-6">
-        <p className="text-body-s text-secondary text-center">はじめてご利用の方</p>
+        <p className="text-body-s text-secondary text-center">はじめての方</p>
         <Button asChild variant="secondary" className="w-full">
           <Link href="/sign-up">会員登録する</Link>
         </Button>
