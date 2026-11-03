@@ -12,6 +12,8 @@ const saved: DeliveryAddress = {
   id: '123e4567-e89b-42d3-a456-426614174000',
   address: '東京都千代田区丸の内1-1',
   building: '101',
+  label: '',
+  isDefault: false,
   deliveryNote: '玄関前',
   latitude: 35,
   longitude: 139,

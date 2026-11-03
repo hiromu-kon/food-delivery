@@ -29,6 +29,13 @@
       "when": 1793673123947,
       "tag": "0003_many_harpoon",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793704162352,
+      "tag": "0004_overconfident_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
