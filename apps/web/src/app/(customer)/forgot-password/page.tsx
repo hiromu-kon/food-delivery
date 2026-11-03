@@ -6,6 +6,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell
       title="パスワード再設定"
+      backHref="/login"
       description="登録したメールアドレスに、再設定のリンクを送ります。"
     >
       <ForgotPasswordForm />

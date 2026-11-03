@@ -27,7 +27,7 @@ export default async function AddressesPage() {
   if (response?.status === 401) redirect('/login');
   if (response?.status === 403) redirect('/access-denied');
   return (
-    <AuthShell title="お届け先の管理" description="住所・建物名・配達メモを登録できます。">
+    <AuthShell title="お届け先" backHref="/account">
       <AddressesManager initialAddresses={addresses} initialError={error} />
     </AuthShell>
   );

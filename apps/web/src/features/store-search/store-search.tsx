@@ -3,6 +3,15 @@
 import { addressSchema, storeSearchResponseSchema } from '@repo/contract';
 import { defaultCartDeliveryFee } from '@repo/domain';
 import Link from 'next/link';
+import { ChevronDownIcon, MapPinIcon } from 'lucide-react';
+import {
+  Drawer,
+  DrawerTrigger,
+  DrawerContent,
+  DrawerTitle,
+  DrawerDescription,
+} from '@/components/ui/drawer';
+import { ListItem } from '@/components/ui/list-item';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { apiClient } from '@/api/client';
@@ -31,6 +40,7 @@ const source = {
 
 export function StoreSearch({ userId }: { userId: string }) {
   const [result, setResult] = useState<SearchResult>({ addresses: [], selectedId: '', stores: [] });
+  const [choosing, setChoosing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const requests = useRef(new StoreSearchRequests());
@@ -93,36 +103,60 @@ export function StoreSearch({ userId }: { userId: string }) {
     };
   }, [storageKey, reload]);
 
+  const selectedAddress = result.addresses.find((address) => address.id === result.selectedId);
+
   return (
-    <div className="space-y-8">
-      <section aria-labelledby="delivery-address" className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <label id="delivery-address" htmlFor="address-choice" className="text-heading-m">
-            お届け先
-          </label>
-          <Link href="/addresses" className="text-body-m text-brand underline">
-            お届け先を登録・編集
-          </Link>
-        </div>
-        {result.addresses.length > 0 && (
-          <select
-            id="address-choice"
-            value={result.selectedId}
-            onChange={(event) => reload(event.target.value)}
-            className="text-body-m w-full min-w-0 rounded-md border bg-surface px-3 py-3"
+    <div>
+      <Drawer open={choosing} onOpenChange={setChoosing}>
+        <DrawerTrigger asChild>
+          <button
+            type="button"
+            className="flex min-h-16 w-full items-center gap-3 border-b px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-(--border-color-focus)"
           >
+            <MapPinIcon className="text-brand size-5 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="text-body-s text-secondary block">お届け先</span>
+              <span className="text-label-m block break-words">
+                {selectedAddress
+                  ? `${selectedAddress.address} ${selectedAddress.building}`.trim()
+                  : 'お届け先を選択・登録する'}
+              </span>
+            </span>
+            <ChevronDownIcon className="size-5 shrink-0" aria-hidden />
+          </button>
+        </DrawerTrigger>
+        <DrawerContent>
+          <DrawerTitle>お届け先を選ぶ</DrawerTitle>
+          <DrawerDescription>配達先を選ぶと、配達できるお店が変わります。</DrawerDescription>
+          <div>
             {result.addresses.map((address) => (
-              <option key={address.id} value={address.id}>
-                {address.address} {address.building}
-              </option>
+              <ListItem
+                key={address.id}
+                title={address.address}
+                description={address.building}
+                selected={address.id === result.selectedId}
+                chevron={false}
+                onClick={() => {
+                  reload(address.id);
+                  setChoosing(false);
+                }}
+              />
             ))}
-          </select>
-        )}
-      </section>
-      <section aria-labelledby="store-list" aria-busy={loading} className="space-y-5">
-        <h2 id="store-list" className="text-heading-m">
-          お届けできるお店
-        </h2>
+          </div>
+          <Button asChild variant="secondary" className="w-full" onClick={() => setChoosing(false)}>
+            <Link href="/addresses">お届け先を追加・編集する</Link>
+          </Button>
+        </DrawerContent>
+      </Drawer>
+      <section aria-labelledby="store-list" aria-busy={loading} className="space-y-6 p-4 md:p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 id="store-list" className="text-heading-l">
+            配達できるお店
+          </h1>
+          {!loading && !error && (
+            <p className="text-body-m text-secondary">{result.stores.length} 店</p>
+          )}
+        </div>
         {loading && (
           <p role="status" className="text-body-m text-secondary">
             お届け先とお店を確認しています…
@@ -150,10 +184,7 @@ export function StoreSearch({ userId }: { userId: string }) {
             </p>
           ) : (
             <>
-              <p className="text-body-s text-secondary">
-                配達料は目安です。確定金額は注文時にご確認ください。メニューの閲覧・注文は準備中です。
-              </p>
-              <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {result.stores.map((store) => (
                   <li key={store.id}>
                     <StoreCard
@@ -167,6 +198,9 @@ export function StoreSearch({ userId }: { userId: string }) {
                   </li>
                 ))}
               </ul>
+              <p className="text-body-s text-secondary">
+                配達料は目安です。確定金額は注文時にご確認ください。メニューの閲覧・注文は準備中です。
+              </p>
             </>
           ))}
       </section>
