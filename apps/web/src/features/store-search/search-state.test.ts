@@ -6,6 +6,8 @@ const address = (id: string): DeliveryAddress => ({
   id,
   address: id,
   building: '',
+  label: '',
+  isDefault: false,
   deliveryNote: '',
   latitude: 35,
   longitude: 139,
@@ -38,6 +40,28 @@ describe('店舗検索の取得制御', () => {
       expect(update).toHaveBeenCalledWith({ addresses: [a, b], selectedId: a.id, stores: [] });
     },
   );
+  it('明示選択を既定より優先し、欠落時は既定、既定なしはID順に復旧する', async () => {
+    const home = { ...b, isDefault: true, label: '自宅' };
+    for (const [addresses, preferredId, expectedId] of [
+      [[home, a], a.id, a.id],
+      [[a, home], '', b.id],
+      [[a, home], 'deleted', b.id],
+      [[b, a], '', a.id],
+    ] as const) {
+      const update = vi.fn();
+      await new StoreSearchRequests().run(
+        { addresses: () => Promise.resolve([...addresses]), stores: () => Promise.resolve([]) },
+        preferredId,
+        update,
+        vi.fn(),
+      );
+      expect(update).toHaveBeenCalledWith({
+        addresses: [...addresses],
+        selectedId: expectedId,
+        stores: [],
+      });
+    }
+  });
   it('未登録なら店舗APIを呼ばない', async () => {
     const stores = vi.fn();
     const update = vi.fn();

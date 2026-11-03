@@ -71,13 +71,20 @@ function ListItem({
           {title}
         </span>
         {description && (
-          <span className={cn('text-body-s text-secondary', disabled && 'text-disabled')}>
+          <span
+            className={cn('text-body-s text-secondary break-words', disabled && 'text-disabled')}
+          >
             {description}
           </span>
         )}
       </span>
       {value && (
-        <span className={cn('text-body-m text-secondary shrink-0', disabled && 'text-disabled')}>
+        <span
+          className={cn(
+            'text-body-m text-secondary min-w-0 max-w-[50%] break-words text-right',
+            disabled && 'text-disabled',
+          )}
+        >
           {value}
         </span>
       )}

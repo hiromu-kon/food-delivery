@@ -6,7 +6,11 @@ import {
 } from '@repo/contract';
 
 export function changedAddress(input: AddressInput, previous: DeliveryAddress) {
-  const normalized = addressInputSchema.parse(input);
+  const normalized = addressInputSchema.parse({
+    ...input,
+    label: input.label ?? previous.label,
+    isDefault: input.isDefault ?? previous.isDefault,
+  });
   const changes = Object.fromEntries(
     Object.entries(normalized).filter(
       ([key, value]) => previous[key as keyof AddressInput] !== value,

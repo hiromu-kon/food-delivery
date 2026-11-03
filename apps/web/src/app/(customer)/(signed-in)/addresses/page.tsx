@@ -10,7 +10,7 @@ import { requireCustomer } from '@/features/auth/session';
 export const instant = false;
 
 export default async function AddressesPage() {
-  await requireCustomer();
+  const user = await requireCustomer();
   let addresses: DeliveryAddress[] = [];
   let error: string | null = null;
   const client = await createServerApiClient();
@@ -28,7 +28,7 @@ export default async function AddressesPage() {
   if (response?.status === 403) redirect('/access-denied');
   return (
     <AuthShell title="お届け先" backHref="/account">
-      <AddressesManager initialAddresses={addresses} initialError={error} />
+      <AddressesManager key={user.id} initialAddresses={addresses} initialError={error} />
     </AuthShell>
   );
 }
