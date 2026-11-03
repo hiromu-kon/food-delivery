@@ -1,3 +1,6 @@
+import { addressSchema } from '@repo/contract';
+import { z } from 'zod';
+import { createServerApiClient } from '@/api/server';
 import type { Metadata } from 'next';
 import { UserIcon, MapPinIcon, FileTextIcon, ShieldIcon } from 'lucide-react';
 import { ListItem } from '@/components/ui/list-item';
@@ -7,6 +10,19 @@ import { requireCustomer } from '@/features/auth/session';
 export const metadata: Metadata = { title: 'アカウント | Food Delivery' };
 export default async function AccountPage() {
   const user = await requireCustomer();
+  let defaultLabel: string | undefined;
+  try {
+    const client = await createServerApiClient();
+    const response = await client.addresses.$get();
+    if (response.ok) {
+      const { addresses } = z
+        .object({ addresses: z.array(addressSchema) })
+        .parse(await response.json());
+      defaultLabel = addresses.find((address) => address.isDefault)?.label || undefined;
+    }
+  } catch {
+    // 住所の取得に失敗しても、設定への導線は残す。
+  }
   return (
     <AuthShell title="アカウント">
       <div className="space-y-5">
@@ -24,7 +40,12 @@ export default async function AccountPage() {
           </div>
         </section>
         <nav aria-label="アカウントの設定">
-          <ListItem href="/addresses" title="お届け先" icon={<MapPinIcon />} />
+          <ListItem
+            href="/addresses"
+            title="お届け先"
+            icon={<MapPinIcon />}
+            {...(defaultLabel ? { value: defaultLabel } : {})}
+          />
           <ListItem href="/terms" title="利用規約" icon={<FileTextIcon />} />
           <ListItem href="/privacy" title="プライバシーポリシー" icon={<ShieldIcon />} />
           <LogoutButton />

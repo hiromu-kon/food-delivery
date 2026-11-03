@@ -39,7 +39,10 @@ export class StoreSearchRequests {
         const addresses = await source.addresses();
         if (generation !== this.generation) return;
         const selectedId =
-          addresses.find((item) => item.id === preferredId)?.id ?? addresses[0]?.id ?? '';
+          addresses.find((item) => item.id === preferredId)?.id ??
+          addresses.find((item) => item.isDefault)?.id ??
+          [...addresses].sort((a, b) => a.id.localeCompare(b.id))[0]?.id ??
+          '';
         try {
           const stores = selectedId ? await source.stores(selectedId) : [];
           if (generation === this.generation) update({ addresses, selectedId, stores });

@@ -50,6 +50,13 @@ export function StoreSearch({ userId }: { userId: string }) {
   const reload = useCallback(
     (preferredId = selected.current) => {
       selected.current = preferredId;
+      // 店舗取得が終わる前に遷移しても明示選択を失わない。
+      try {
+        if (preferredId) sessionStorage.setItem(storageKey, preferredId);
+        else sessionStorage.removeItem(storageKey);
+      } catch {
+        /* 保存できない環境では表示中の選択を使う */
+      }
       setResult((current) => ({ ...current, selectedId: preferredId, stores: [] }));
       setLoading(true);
       setError('');
@@ -57,11 +64,12 @@ export function StoreSearch({ userId }: { userId: string }) {
         source,
         preferredId,
         (next) => {
-          selected.current = next.selectedId;
+          // 自動復旧先は明示選択として保存しない。
+          selected.current = preferredId === next.selectedId ? preferredId : '';
           setResult(next);
           setLoading(false);
           try {
-            if (next.selectedId) sessionStorage.setItem(storageKey, next.selectedId);
+            if (selected.current) sessionStorage.setItem(storageKey, selected.current);
             else sessionStorage.removeItem(storageKey);
           } catch {
             /* 保存できない環境では表示中の選択を使う */
@@ -118,7 +126,7 @@ export function StoreSearch({ userId }: { userId: string }) {
               <span className="text-body-s text-secondary block">お届け先</span>
               <span className="text-label-m block break-words">
                 {selectedAddress
-                  ? `${selectedAddress.address} ${selectedAddress.building}`.trim()
+                  ? `${selectedAddress.label ? `${selectedAddress.label}：` : ''}${selectedAddress.address} ${selectedAddress.building}`.trim()
                   : 'お届け先を選択・登録する'}
               </span>
             </span>
@@ -132,8 +140,10 @@ export function StoreSearch({ userId }: { userId: string }) {
             {result.addresses.map((address) => (
               <ListItem
                 key={address.id}
-                title={address.address}
-                description={address.building}
+                title={address.label || address.address}
+                description={
+                  address.label ? `${address.address} ${address.building}`.trim() : address.building
+                }
                 selected={address.id === result.selectedId}
                 chevron={false}
                 onClick={() => {

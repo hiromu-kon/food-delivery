@@ -31,6 +31,27 @@ describe('お届け先フォームとリクエストの整合性', () => {
     });
     expect(changedAddress({ ...input, building: '' }, saved)).toEqual({ building: '' });
   });
+  it('名前・既定を省略した編集で保存済みの値を初期化しない', () => {
+    const previous = { ...saved, label: '職場', isDefault: true };
+    expect(changedAddress({ ...input, deliveryNote: '受付へ' }, previous)).toEqual({
+      deliveryNote: '受付へ',
+    });
+    expect(changedAddress({ ...input, label: '', isDefault: false }, previous)).toEqual({
+      label: '',
+      isDefault: false,
+    });
+    expect(changedAddress({ ...input, label: ' 自宅 ', isDefault: true }, previous)).toEqual({
+      label: '自宅',
+    });
+  });
+  it('名前は空・20 UTF16を許可して21 UTF16を拒否する', () => {
+    for (const label of ['', 'あ'.repeat(20), '🏠'.repeat(10)]) {
+      expect(addressInputSchema.safeParse({ ...input, label }).success).toBe(true);
+    }
+    for (const label of ['あ'.repeat(21), '🏠'.repeat(10) + 'a']) {
+      expect(addressInputSchema.safeParse({ ...input, label }).success).toBe(false);
+    }
+  });
   it('住所変更は変更した住所だけを送り、空白の正規化後に差分を判定する', () => {
     expect(changedAddress({ ...input, address: '大阪府大阪市1-1' }, saved)).toEqual({
       address: '大阪府大阪市1-1',
