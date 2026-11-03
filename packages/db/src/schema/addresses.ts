@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { check, doublePrecision, index, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { users } from './auth';
 
@@ -11,6 +20,8 @@ export const addresses = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     address: text().notNull(),
+    label: text().notNull().default(''),
+    isDefault: boolean().notNull().default(false),
     building: text().notNull().default(''),
     deliveryNote: text().notNull().default(''),
     latitude: doublePrecision().notNull(),
@@ -18,6 +29,10 @@ export const addresses = pgTable(
   },
   (table) => [
     index('addresses_user_id_idx').on(table.userId),
+    uniqueIndex('addresses_user_default_idx')
+      .on(table.userId)
+      .where(sql`${table.isDefault}`),
+    check('addresses_label_length', sql`char_length(${table.label}) <= 20`),
     check('addresses_address_length', sql`char_length(${table.address}) between 1 and 200`),
     check('addresses_building_length', sql`char_length(${table.building}) <= 100`),
     check('addresses_delivery_note_length', sql`char_length(${table.deliveryNote}) <= 100`),
