@@ -24,6 +24,8 @@ F-01 の API は Better Auth と PostgreSQL / Drizzle を使う。公開経路�
 
 `requireSession` はユーザーを DB から読み直し、未認証・期限切れ・削除済みは 401、停止済みは 403 にする。`requireRole` は許可したロール以外を 403 にする。注文の作成では `requireRole(['customer'], true)` を使い、メール未確認なら 403 にする。ログインもメール確認後だけ許可する（R-14）。
 
+店舗スタッフの所属・店舗スコープと `GET /store/me` は [店舗スタッフ認証](store-auth.md) を参照する。
+
 ## セッションとメール
 
 - Web は `credentials: 'include'` で Cookie を送る。Cookie は HttpOnly・SameSite=Lax、本番は Secure。Web と API は同じサイト内に配置する。
