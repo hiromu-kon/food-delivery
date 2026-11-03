@@ -8,6 +8,8 @@ const address: DeliveryAddress = {
   id: 'c07517c1-f24d-4f07-8dc9-33c812980da2',
   address: '東京都千代田区1-1',
   building: '101',
+  label: '',
+  isDefault: false,
   deliveryNote: '玄関前',
   latitude: 35,
   longitude: 139,
@@ -65,6 +67,8 @@ describe('お届け先操作', () => {
       address: address.address,
       building: '',
       deliveryNote: 'あ'.repeat(100),
+      label: '',
+      isDefault: false,
     });
   });
   it('削除確認のキャンセルはAPIと一覧を変えない', async () => {
