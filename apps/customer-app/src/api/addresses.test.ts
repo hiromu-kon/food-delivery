@@ -15,6 +15,8 @@ const address = {
   id: 'c07517c1-f24d-4f07-8dc9-33c812980da2',
   address: '東京都千代田区1-1',
   building: '',
+  label: '',
+  isDefault: false,
   deliveryNote: '',
   latitude: 35,
   longitude: 139,
