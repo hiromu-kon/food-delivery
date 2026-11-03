@@ -30,6 +30,7 @@ function TopBar({ receptionStatus, account, className, ...props }: TopBarProps) 
       data-slot="top-bar"
       className={cn(
         'border-default bg-base flex h-16 shrink-0 items-center justify-between gap-6 border-b px-10',
+        receptionStatus === 'stopped' && 'bg-warning-subtle border-warning',
         className,
       )}
       {...props}
@@ -38,8 +39,22 @@ function TopBar({ receptionStatus, account, className, ...props }: TopBarProps) 
         <div className="flex items-center gap-2.5">
           <span className={cn('size-2.5 shrink-0 rounded-full', status.dotClassName)} aria-hidden />
           <div className="flex flex-col">
-            <p className="text-label-m text-primary">{status.label}</p>
-            <p className="text-body-s text-secondary">{status.description}</p>
+            <p
+              className={cn(
+                'text-label-m text-primary',
+                receptionStatus === 'stopped' && 'text-warning',
+              )}
+            >
+              {status.label}
+            </p>
+            <p
+              className={cn(
+                'text-body-s text-secondary',
+                receptionStatus === 'stopped' && 'text-warning',
+              )}
+            >
+              {status.description}
+            </p>
           </div>
         </div>
       ) : (
