@@ -20,7 +20,9 @@ Next.js 16.4 の Cache Components / クライアント側画面保持を考慮�
 
 ## 表示
 
-既存の StoreCard、NoticeBanner、Button とデザイントークンを再利用する。配達料の目安は domain 公開定数 `defaultCartDeliveryFee` を表示し、確定金額は注文時に確認する旨を示す。最低注文金額と距離は API 値を既存 formatter で表示する。モバイルは1列、広い画面は2〜3列で表示する。
+既存の StoreCard、NoticeBanner、Button とデザイントークンを再利用する。配達料の目安は domain 公開定数 `defaultCartDeliveryFee` を表示し、確定金額は注文時に確認する旨を示す。最低注文金額と距離は API 値を既存 formatter で表示する。モバイルは1列、広い画面は2〜3列で表示する。「配達できるお店」と取得済み配列の件数「n 店」を表示し、モバイルの左右余白は16px、店舗間隔は24pxとする。
+
+お届け先は約64pxの AddressBar から Drawer を開いて選ぶ。シート内から `/addresses` へ追加・編集に進める。長い住所は折り返し、固定高で切り取らない。Web の上部メニューとアプリの下部タブの違いは [Web デザイン整合](design-alignment-web.md) を参照。
 
 ## 検証
 

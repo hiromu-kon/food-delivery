@@ -23,13 +23,13 @@ MVP の画面に必要な部品だけを作る。見た目・状態・使い分�
 
 アプリの通知は、両アプリの layout に置いた `ToastProvider` と `useToast()` の `show`・`dismiss` で表示・消去する。通知は最新の 1 件に置き換え、既定で 4 秒後に消す。Android の操作時間の設定を反映し、ホームインジケーターを避けて表示する。`AppHeader` と `TabBar` のセーフエリアは画面側で確保する。
 
-注文者アプリ専用の部品は `apps/customer-app/src/components/` の `store/`・`cart/`・`order/`・`sheet/` に置く。開発用画面 `/dev/customer-components` で各状態と操作を確認できる。写真なし・画像読み込み失敗時は、灰色の面と料理アイコンにする。受付停止中の店舗もメニューは見られるが、商品追加は呼び出し側で無効にする。
+注文者アプリ専用の部品は `apps/customer-app/src/components/` の `store/`・`cart/`・`order/`・`sheet/` に置く。開発用画面 `/dev/customer-components` で各状態と操作を確認できる。StoreCard は写真未登録・読み込み失敗時に灰色の面と料理アイコンを表示する。MenuItem は写真未登録なら写真欄を省略し、URL がある写真の読み込み失敗時だけ灰色の面と料理アイコンを残す。受付停止中の店舗もメニューは見られるが、商品追加は呼び出し側で無効にする。
 
 `QuantityStepper` の数量変更先は `packages/domain` の `getCartQuantityControls` から受け取る。数量 1 からの削除は `onRemove`、増減は `onQuantityChange` で呼び出し側に通知する。`CartBar` の点数と小計は呼び出し側の値を表示し、0 点のときは表示しない。`OrderSteps` はキャンセル時に進行の線を出さず、キャンセルのラベルを出す。
 
 `BottomSheet` は開閉状態を呼び出し側が管理する。閉じるボタン・背面タップ・端末の戻る操作・ハンドルの下方向のドラッグで閉じ、長い内容は中でスクロールする。セーフエリアと入力時のキーボードの余白は部品内で確保する。
 
-Web の注文者向け部品は、共通部品と同じ `apps/web/src/components/ui/` に置く。開発用画面 `/dev/customer-components` で状態と操作を確認できる。数量・金額・距離・注文進行はアプリと同じ `packages/domain` の関数を使う。写真なし・読み込み失敗時は灰色の面と料理アイコンを表示し、写真の配信元が決まるまでは `next/image` を `unoptimized` で使う。
+Web の注文者向け部品は、共通部品と同じ `apps/web/src/components/ui/` に置く。開発用画面 `/dev/customer-components` で状態と操作を確認できる。数量・金額・距離・注文進行はアプリと同じ `packages/domain` の関数を使う。写真の扱いはアプリと共通で、StoreCard は未登録・読み込み失敗時とも灰色の面と料理アイコンを表示する。MenuItem は未登録なら写真欄を省略し、URL がある写真の読み込み失敗時は灰色の面と料理アイコンを残す。写真の配信元が決まるまでは `next/image` を `unoptimized` で使う。
 
 Web の Drawer は既存の Radix Dialog を土台にし、閉じる操作・背景操作の遮断・フォーカスの閉じ込め・トリガーへのフォーカス復帰を任せる。ハンドルはドラッグでもキーボードでも操作できる。元に戻せない操作の確認には、外側を押しても閉じない AlertDialog を使う。
 
