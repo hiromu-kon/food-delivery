@@ -36,6 +36,13 @@
       "when": 1793704162352,
       "tag": "0004_overconfident_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793704296951,
+      "tag": "0005_broken_magdalene",
+      "breakpoints": true
     }
   ]
 }
