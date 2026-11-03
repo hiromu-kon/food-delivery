@@ -11,7 +11,7 @@
 - 編集は一覧の現在値を初期表示する。正規化した値を元の値と比較し、変わった項目だけを共有 `addressUpdateSchema` に通してPATCHする。空文字で任意項目を消せる。無変更の保存は通信せず一覧へ戻る。
 - 所有者・座標の入力欄は設けず、送信もしない。サーバーが決定した住所データだけを表示する。
 - 削除は共通 `AlertDialog` で住所・建物・メモと取り消せない旨を確認する。キャンセルは通信せず一覧を保持する。
-- 共通のButton／TextField／Text／NoticeBannerとデザイントークンを使う。既存のStack、下部SafeArea、キーボード回避とScrollViewを維持し、登録・編集の切り替えでナビゲーターを作り直さない。
+- 共通のButton／TextField／Text／NoticeBannerとデザイントークンを使う。56pxを最小高とするAppHeaderの下に左右16px・上16pxで一覧を配置し、住所・建物をbody-m、配達メモをbody-sで表示する。編集・削除は文字リンク、末尾の追加CTAは全幅secondaryとし、確認ダイアログのdangerを維持する。既存のStack、下部SafeArea、キーボード回避とScrollViewを維持し、登録・編集の切り替えでナビゲーターを作り直さない。
 
 ## 認証と競合
 
