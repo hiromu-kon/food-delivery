@@ -1,25 +1,22 @@
 import { defaultCartDeliveryFee } from '@repo/domain';
 import { Button } from '@repo/native-ui/button';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@repo/native-ui/select';
+import { Icon } from '@repo/native-ui/icon';
+import { Check, ChevronDown, MapPin } from 'lucide-react-native';
 import { Text } from '@repo/native-ui/text';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { createStoreSearchTransport } from '@/api/stores';
+import { BottomSheet } from '@/components/sheet/bottom-sheet';
 import { StoreCard } from '@/components/store/store-card';
-import { AuthScreen, FormError } from '@/features/auth/auth-screen';
+import { ScreenShell, FormError } from '@/features/auth/auth-screen';
 import { useSession } from '@/features/auth/session-provider';
 import { StoreSearchController } from './store-search';
 
 export function StoreSearchScreen() {
+  const [choosing, setChoosing] = useState(false);
   const { controller: session } = useSession();
   const controller = useMemo(
     () => new StoreSearchController(createStoreSearchTransport(session), session),
@@ -41,30 +38,59 @@ export function StoreSearchScreen() {
   const label = (address: typeof selected) =>
     address ? [address.address, address.building].filter(Boolean).join(' ') : '';
   return (
-    <AuthScreen title="お届け先に届くお店">
-      {state.addresses.length > 0 && (
-        <View className="gap-2">
-          <Text variant="label-m">お届け先</Text>
-          <Select
-            value={selected ? { value: selected.id, label: label(selected) } : undefined}
-            onValueChange={(option) => {
-              if (option) void controller.select(option.value);
-            }}
-          >
-            <SelectTrigger accessibilityLabel="お届け先を切り替える">
-              <SelectValue placeholder="お届け先を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {state.addresses.map((address) => (
-                <SelectItem key={address.id} value={address.id} label={label(address)} />
-              ))}
-            </SelectContent>
-          </Select>
+    <ScreenShell
+      title="配達できるお店"
+      contentClassName="gap-6"
+      header={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="お届け先を切り替える"
+          onPress={() => setChoosing(true)}
+          className="border-default min-h-16 flex-row items-center gap-3 border-b px-4 py-2"
+        >
+          <Icon as={MapPin} className="text-brand" aria-hidden />
+          <View className="min-w-0 flex-1">
+            <Text variant="body-s" className="text-secondary">
+              お届け先
+            </Text>
+            <Text variant="label-l">{label(selected) || 'お届け先を選択'}</Text>
+          </View>
+          <Icon as={ChevronDown} aria-hidden />
+        </Pressable>
+      }
+    >
+      <BottomSheet open={choosing} onOpenChange={setChoosing} title="お届け先を選ぶ">
+        <View>
+          {state.addresses.map((address) => (
+            <Pressable
+              key={address.id}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: address.id === state.selectedId }}
+              accessibilityLabel={label(address)}
+              onPress={() => {
+                setChoosing(false);
+                void controller.select(address.id);
+              }}
+              className="border-default min-h-[58px] flex-row items-center gap-3 border-b py-3"
+            >
+              <Icon as={MapPin} className="text-secondary" aria-hidden />
+              <Text className="flex-1">{label(address)}</Text>
+              {address.id === state.selectedId && (
+                <Icon as={Check} className="text-brand" aria-hidden />
+              )}
+            </Pressable>
+          ))}
         </View>
-      )}
-      <Button variant="secondary" onPress={() => router.push('/addresses')}>
-        お届け先を登録・編集する
-      </Button>
+        <Button
+          variant="secondary"
+          onPress={() => {
+            setChoosing(false);
+            router.push('/addresses');
+          }}
+        >
+          お届け先を追加する
+        </Button>
+      </BottomSheet>
       {state.status === 'loading' && (
         <ActivityIndicator accessibilityLabel="お届け先と店舗を読み込み中" />
       )}
@@ -80,15 +106,22 @@ export function StoreSearchScreen() {
       )}
       {state.status === 'ready' &&
         (state.addresses.length === 0 ? (
-          <NoticeBanner>お届け先を登録すると、配達エリア内のお店を探せます。</NoticeBanner>
+          <View className="gap-4">
+            <NoticeBanner>お届け先を登録すると、配達エリア内のお店を探せます。</NoticeBanner>
+            <Button variant="secondary" onPress={() => router.push('/addresses')}>
+              お届け先を追加する
+            </Button>
+          </View>
         ) : state.stores.length === 0 ? (
           <NoticeBanner>
             このお届け先に配達できるお店はまだありません。別のお届け先もお試しください。
           </NoticeBanner>
         ) : (
           <>
-            <Text variant="heading-m">配達エリア内のお店（{state.stores.length}件）</Text>
-            <NoticeBanner>メニューの表示・注文機能は準備中です。</NoticeBanner>
+            <View className="flex-row flex-wrap items-center gap-2">
+              <Text variant="heading-l">配達できるお店</Text>
+              <Text className="text-secondary">{state.stores.length} 店</Text>
+            </View>
             {state.stores.map((store) => (
               <StoreCard
                 key={store.id}
@@ -102,6 +135,7 @@ export function StoreSearchScreen() {
                 accessibilityRole="text"
               />
             ))}
+            <NoticeBanner>メニューの表示・注文機能は準備中です。</NoticeBanner>
           </>
         ))}
       {state.status === 'ready' && state.addresses.length > 0 && (
@@ -114,6 +148,6 @@ export function StoreSearchScreen() {
           最新の情報に更新する
         </Button>
       )}
-    </AuthScreen>
+    </ScreenShell>
   );
 }

@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 
 import { apiClient } from '@/api/client';
-import { AuthScreen, FormError, useAuthAction } from '@/features/auth/auth-screen';
+import { ScreenShell, FormError, useAuthAction } from '@/features/auth/auth-screen';
 import { assertAuthSuccess } from '@/features/auth/request';
 
 export default function ForgotPasswordScreen() {
@@ -15,7 +15,7 @@ export default function ForgotPasswordScreen() {
   const [sent, setSent] = useState(false);
   const form = useAuthAction();
   return (
-    <AuthScreen title="パスワード再設定">
+    <ScreenShell title="パスワード再設定">
       <Text>
         登録したメールアドレスを入力してください。メールのリンクからブラウザで新しいパスワードを設定し、アプリに戻ってログインしてください。
       </Text>
@@ -53,6 +53,6 @@ export default function ForgotPasswordScreen() {
       <Button variant="ghost" onPress={() => router.replace('/login')}>
         ログイン画面へ戻る
       </Button>
-    </AuthScreen>
+    </ScreenShell>
   );
 }

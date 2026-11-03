@@ -1,13 +1,15 @@
 import { AlertDialog } from '@repo/native-ui/alert-dialog';
+import { IconButton } from '@repo/native-ui/icon-button';
+import { RefreshCw } from 'lucide-react-native';
 import { Button } from '@repo/native-ui/button';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
 import { Text } from '@repo/native-ui/text';
 import { TextField } from '@repo/native-ui/text-field';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { createAddressTransport } from '@/api/addresses';
-import { AuthScreen, FormError } from '@/features/auth/auth-screen';
+import { ScreenShell, FormError } from '@/features/auth/auth-screen';
 import { useSession } from '@/features/auth/session-provider';
 import { AddressesController } from './addresses';
 
@@ -35,7 +37,21 @@ export function AddressesScreen() {
   }, [ready, keepSession, controller]);
   const editor = state.editor;
   return (
-    <AuthScreen title="お届け先">
+    <ScreenShell
+      title="お届け先"
+      headerRight={
+        !editor && (
+          <IconButton
+            icon={RefreshCw}
+            accessibilityLabel="一覧を再読み込み"
+            disabled={state.pending}
+            onPress={() => {
+              void controller.load();
+            }}
+          />
+        )
+      }
+    >
       <FormError message={state.error} />
       {editor ? (
         <>
@@ -79,57 +95,55 @@ export function AddressesScreen() {
           </Button>
         </>
       ) : (
-        <>
-          <Button disabled={state.pending || !state.loaded} onPress={() => controller.edit()}>
-            お届け先を登録する
-          </Button>
+        <View className="gap-3">
           {state.pending && <ActivityIndicator accessibilityLabel="お届け先を処理中" />}
           {state.loaded && state.addresses.length === 0 && (
             <NoticeBanner>お届け先はまだ登録されていません。</NoticeBanner>
           )}
           {state.addresses.map((address) => (
             <View key={address.id} className="border-default gap-3 rounded-md border p-4">
-              <Text variant="heading-m" selectable>
-                {address.address}
+              <Text variant="body-m" selectable>
+                {[address.address, address.building].filter(Boolean).join(' ')}
               </Text>
-              {address.building !== '' && <Text selectable>{address.building}</Text>}
               {address.deliveryNote !== '' && (
-                <Text className="text-secondary" selectable>
+                <Text variant="body-s" className="text-secondary" selectable>
                   配達メモ：{address.deliveryNote}
                 </Text>
               )}
               <View className="flex-row gap-3">
-                <Button
-                  variant="secondary"
-                  size="M"
+                <Pressable
+                  accessibilityRole="button"
                   accessibilityLabel={`${address.address}を編集`}
                   disabled={state.pending}
                   onPress={() => controller.edit(address)}
+                  className="min-h-11 justify-center"
                 >
-                  編集
-                </Button>
-                <Button
-                  variant="danger"
-                  size="M"
+                  <Text variant="label-m" className="text-brand">
+                    変更する
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
                   accessibilityLabel={`${address.address}を削除`}
                   disabled={state.pending}
                   onPress={() => controller.confirmDelete(address)}
+                  className="min-h-11 justify-center"
                 >
-                  削除
-                </Button>
+                  <Text variant="label-m" className="text-secondary">
+                    削除する
+                  </Text>
+                </Pressable>
               </View>
             </View>
           ))}
           <Button
             variant="secondary"
-            disabled={state.pending}
-            onPress={() => {
-              void controller.load();
-            }}
+            disabled={state.pending || !state.loaded}
+            onPress={() => controller.edit()}
           >
-            一覧を再読み込み
+            お届け先を追加する
           </Button>
-        </>
+        </View>
       )}
       <AlertDialog
         open={Boolean(state.deleting)}
@@ -154,6 +168,6 @@ export function AddressesScreen() {
           void controller.remove();
         }}
       />
-    </AuthScreen>
+    </ScreenShell>
   );
 }
