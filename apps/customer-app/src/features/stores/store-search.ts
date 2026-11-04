@@ -93,9 +93,11 @@ export class StoreSearchController {
     try {
       const addresses = await this.transport.addresses();
       if (generation !== this.generation) return;
+      if (!addresses.some((item) => item.id === this.preferredId)) this.preferredId = undefined;
       const selectedId =
-        addresses.find((item) => item.id === this.preferredId)?.id ?? addresses[0]?.id;
-      this.preferredId = selectedId;
+        addresses.find((item) => item.id === this.preferredId)?.id ??
+        addresses.find((item) => item.isDefault)?.id ??
+        [...addresses].sort((a, b) => a.id.localeCompare(b.id))[0]?.id;
       this.publish({ addresses, selectedId });
       const stores = selectedId ? await this.transport.stores(selectedId) : [];
       if (generation === this.generation) this.publish({ stores, status: 'ready' });

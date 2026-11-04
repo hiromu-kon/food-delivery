@@ -36,7 +36,7 @@ export function StoreSearchScreen() {
   );
   const selected = state.addresses.find((item) => item.id === state.selectedId);
   const label = (address: typeof selected) =>
-    address ? [address.address, address.building].filter(Boolean).join(' ') : '';
+    address ? [address.label, address.address, address.building].filter(Boolean).join(' ') : '';
   return (
     <ScreenShell
       title="配達できるお店"

@@ -1,6 +1,8 @@
 import { AlertDialog } from '@repo/native-ui/alert-dialog';
 import { IconButton } from '@repo/native-ui/icon-button';
 import { RefreshCw } from 'lucide-react-native';
+import { Checkbox } from '@repo/native-ui/checkbox';
+import { Tag } from '@repo/native-ui/tag';
 import { Button } from '@repo/native-ui/button';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
 import { Text } from '@repo/native-ui/text';
@@ -57,6 +59,14 @@ export function AddressesScreen() {
         <>
           <Text variant="heading-m">{editor.original ? 'お届け先を編集' : 'お届け先を登録'}</Text>
           <TextField
+            label="ラベル"
+            helperText="自宅・職場など（任意・20文字以内）"
+            value={editor.values.label}
+            onChangeText={(value) => controller.change('label', value)}
+            editable={!state.pending}
+            maxLength={20}
+          />
+          <TextField
             label="住所（必須）"
             helperText="都道府県から番地まで（200文字以内）"
             value={editor.values.address}
@@ -82,6 +92,15 @@ export function AddressesScreen() {
             maxLength={100}
             multiline
           />
+          <View className="min-h-11 flex-row items-center gap-3">
+            <Checkbox
+              checked={editor.values.isDefault}
+              onCheckedChange={(checked) => controller.change('isDefault', checked)}
+              disabled={state.pending}
+              accessibilityLabel="このお届け先をいつも使う"
+            />
+            <Text className="flex-1">このお届け先をいつも使う</Text>
+          </View>
           <Button
             loading={state.pending}
             onPress={() => {
@@ -102,6 +121,16 @@ export function AddressesScreen() {
           )}
           {state.addresses.map((address) => (
             <View key={address.id} className="border-default gap-3 rounded-md border p-4">
+              {(address.label !== '' || address.isDefault) && (
+                <View className="flex-row flex-wrap items-center gap-2">
+                  {address.label !== '' && (
+                    <Text variant="label-l" role="heading" className="shrink">
+                      {address.label}
+                    </Text>
+                  )}
+                  {address.isDefault && <Tag>いつも使う</Tag>}
+                </View>
+              )}
               <Text variant="body-m" selectable>
                 {[address.address, address.building].filter(Boolean).join(' ')}
               </Text>

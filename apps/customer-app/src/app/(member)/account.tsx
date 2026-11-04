@@ -2,18 +2,45 @@ import { Icon } from '@repo/native-ui/icon';
 import { ListItem } from '@repo/native-ui/list-item';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
 import { Text } from '@repo/native-ui/text';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { FileText, LogOut, MapPin, Shield, User } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
+import { createAddressTransport } from '@/api/addresses';
 import { env } from '@/env';
 import { ScreenShell } from '@/features/auth/auth-screen';
 import { useSession } from '@/features/auth/session-provider';
 
 export default function AccountScreen() {
   const { state, controller } = useSession();
+  const [preference, setPreference] = useState<{ userId: string; label: string }>();
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setPreference(undefined);
+      if (state.status === 'authenticated') {
+        void createAddressTransport(controller)
+          .list()
+          .then(
+            (addresses) => {
+              if (active)
+                setPreference({
+                  userId: state.user.id,
+                  label: addresses.find((address) => address.isDefault)?.label ?? '',
+                });
+            },
+            () => {
+              if (active) setPreference(undefined);
+            },
+          );
+      }
+      return () => {
+        active = false;
+      };
+    }, [controller, state]),
+  );
   const [linkError, setLinkError] = useState(false);
   const openLegal = (path: string) => {
     setLinkError(false);
@@ -22,6 +49,7 @@ export default function AccountScreen() {
     );
   };
   if (state.status !== 'authenticated') return null;
+  const defaultLabel = preference?.userId === state.user.id ? preference.label : '';
   return (
     <ScreenShell title="アカウント" contentClassName="gap-5">
       <View className="flex-row items-center gap-4">
@@ -42,7 +70,16 @@ export default function AccountScreen() {
         </View>
       </View>
       <View>
-        <ListItem title="お届け先" icon={MapPin} onPress={() => router.push('/addresses')} />
+        <ListItem
+          title="お届け先"
+          icon={MapPin}
+          trailing={
+            defaultLabel ? (
+              <Text className="text-secondary max-w-[50%] shrink">{defaultLabel}</Text>
+            ) : undefined
+          }
+          onPress={() => router.push('/addresses')}
+        />
         <ListItem title="利用規約" icon={FileText} onPress={() => openLegal('/terms')} />
         <ListItem
           title="プライバシーポリシー"

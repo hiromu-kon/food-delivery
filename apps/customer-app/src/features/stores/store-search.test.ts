@@ -16,6 +16,8 @@ const address = (id: string, text = id): DeliveryAddress => ({
   id,
   address: text,
   building: '',
+  label: '',
+  isDefault: false,
   deliveryNote: '',
   latitude: 35,
   longitude: 139,
@@ -82,6 +84,26 @@ describe('店舗検索 Controller', () => {
     await controller.select('b');
     expect(controller.getSnapshot().selectedId).toBe('b');
     expect(controller.getSnapshot().stores[0]?.id).toBe('b');
+  });
+  it('未選択は既定→ID順、明示選択は既定変更より優先し削除時に既定へ戻る', async () => {
+    const { controller, addresses } = await setup();
+    addresses.mockResolvedValueOnce([
+      address('z'),
+      { ...address('b'), isDefault: true },
+      address('a'),
+    ]);
+    await controller.reload();
+    expect(controller.getSnapshot().selectedId).toBe('b');
+    await controller.select('z');
+    addresses.mockResolvedValueOnce([{ ...address('a'), isDefault: true }, address('z')]);
+    await controller.reload();
+    expect(controller.getSnapshot().selectedId).toBe('z');
+    addresses.mockResolvedValueOnce([address('b'), { ...address('a'), isDefault: true }]);
+    await controller.reload();
+    expect(controller.getSnapshot().selectedId).toBe('a');
+    addresses.mockResolvedValueOnce([address('z'), address('c')]);
+    await controller.reload();
+    expect(controller.getSnapshot().selectedId).toBe('c');
   });
   it('切替直後に店舗を消去し、逆順で届く古い検索結果を捨てる', async () => {
     const { controller, stores } = await setup();
