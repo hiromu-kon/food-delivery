@@ -19,7 +19,11 @@ const config: ExpoConfig = {
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
   },
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    ['@stripe/stripe-react-native', { enableGooglePay: false }],
+  ],
   experiments: {
     typedRoutes: true,
   },
