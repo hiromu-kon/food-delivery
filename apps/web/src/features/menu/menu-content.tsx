@@ -3,9 +3,18 @@ import { defaultCartDeliveryFee, formatYen } from '@repo/domain';
 import { FoodPhoto } from '@/components/ui/food-photo';
 import { MenuItem } from '@/components/ui/menu-item';
 import { StoreNoren } from '@/components/ui/store-noren';
+import type { MenuProduct } from '@/features/cart/cart-state';
 import { Tag } from '@/components/ui/tag';
 
-export function MenuContent({ menu }: { menu: MenuResponse }) {
+export function MenuContent({
+  menu,
+  onAdd,
+  cartReady = false,
+}: {
+  menu: MenuResponse;
+  onAdd?: (item: MenuProduct) => void;
+  cartReady?: boolean;
+}) {
   const { store, categories } = menu;
   return (
     <>
@@ -37,7 +46,6 @@ export function MenuContent({ menu }: { menu: MenuResponse }) {
           </div>
         </dl>
         <p className="text-body-s text-secondary break-words">{store.address}</p>
-        <p className="text-body-s text-secondary">メニューの閲覧のみご利用いただけます。</p>
       </div>
       {categories.length > 0 ? (
         <>
@@ -91,6 +99,8 @@ export function MenuContent({ menu }: { menu: MenuResponse }) {
                           description={item.description}
                           price={item.price}
                           soldOut={item.soldout}
+                          disabled={!cartReady}
+                          {...(onAdd ? { onAdd: () => onAdd(item) } : {})}
                           {...(item.photoUrl ? { photoUrl: item.photoUrl } : {})}
                         />
                       </li>

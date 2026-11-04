@@ -3,13 +3,16 @@ import { Suspense, type ReactNode } from 'react';
 import { requireCustomer } from '@/features/auth/session';
 import { SessionGuard } from '@/features/auth/session-guard';
 import Loading from '../loading';
+import { CartProvider } from '@/features/cart/cart-provider';
 
 async function SignedIn({ children }: { children: ReactNode }) {
-  await requireCustomer();
+  const user = await requireCustomer();
   return (
     <SessionGuard>
-      <CustomerNavigation />
-      {children}
+      <CartProvider key={user.id} userId={user.id}>
+        <CustomerNavigation />
+        {children}
+      </CartProvider>
     </SessionGuard>
   );
 }

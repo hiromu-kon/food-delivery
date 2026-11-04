@@ -75,6 +75,16 @@ describe('メニューの表示と取得', () => {
     expect(html).not.toContain('<button');
     expect(html).toContain('このカテゴリにはまだ商品がありません');
   });
+  it('追加操作では販売中のみボタンを表示し、復元前は無効にする', () => {
+    const html = renderToStaticMarkup(
+      createElement(MenuContent, { menu, onAdd: vi.fn(), cartReady: true }),
+    );
+    expect(html).toContain('商品4をカートに入れる');
+    expect(html).not.toContain('商品5をカートに入れる');
+    expect(html).not.toContain('disabled=');
+    const loading = renderToStaticMarkup(createElement(MenuContent, { menu, onAdd: vi.fn() }));
+    expect(loading).toContain('disabled=');
+  });
   it('写真がある店舗・カテゴリ・商品は写真を表示する', () => {
     const photo = 'data:image/png;base64,iVBORw0KGgo=';
     const result = {
