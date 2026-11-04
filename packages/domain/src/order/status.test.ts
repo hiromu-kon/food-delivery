@@ -18,3 +18,20 @@ describe('orderStatuses', () => {
     expect(orderStatuses).toEqual(names);
   });
 });
+
+it('rejects all transitions absent from the order specification', async () => {
+  const { canTransitionOrder } = await import('./status');
+  const allowed = new Set([
+    'pending:preparing',
+    'pending:canceled',
+    'preparing:ready',
+    'preparing:canceled',
+    'ready:delivering',
+    'ready:canceled',
+    'delivering:delivered',
+    'delivering:canceled',
+  ]);
+  for (const from of orderStatuses)
+    for (const to of orderStatuses)
+      expect(canTransitionOrder(from, to)).toBe(allowed.has(`${from}:${to}`));
+});
