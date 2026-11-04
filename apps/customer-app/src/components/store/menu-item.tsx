@@ -47,7 +47,7 @@ function MenuItem({
           </Text>
         )}
         <View className="py-1">
-          {(!soldOut || !onAdd) && <Text variant="label-l">{formatYen(price)}</Text>}
+          <Text variant="label-l">{formatYen(price)}</Text>
           {soldOut && <Tag>売り切れ</Tag>}
         </View>
       </View>

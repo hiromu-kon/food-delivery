@@ -19,6 +19,7 @@ export function ScreenShell({
   header,
   contentClassName,
   headerRight,
+  footer,
 }: {
   title: string;
   children: ReactNode;
@@ -26,6 +27,7 @@ export function ScreenShell({
   header?: ReactNode;
   contentClassName?: string;
   headerRight?: ReactNode;
+  footer?: ReactNode;
 }) {
   const segments = useSegments();
   const member = segments[0] === '(member)';
@@ -57,6 +59,7 @@ export function ScreenShell({
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+        {footer && <View className="px-4 pb-3">{footer}</View>}
       </SafeAreaView>
     </View>
   );

@@ -40,6 +40,11 @@ export function StoreSearchScreen() {
   return (
     <ScreenShell
       title="配達できるお店"
+      footer={
+        <Button variant="secondary" onPress={() => router.push('/cart')}>
+          カートを見る
+        </Button>
+      }
       contentClassName="gap-6"
       header={
         <Pressable
