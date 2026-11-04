@@ -198,6 +198,7 @@ export function StoreSearch({ userId }: { userId: string }) {
                 {result.stores.map((store) => (
                   <li key={store.id}>
                     <StoreCard
+                      href={`/stores/${store.id}/menu`}
                       name={store.name}
                       {...(store.photoUrl ? { photoUrl: store.photoUrl } : {})}
                       paused={!store.canOrder}
@@ -209,7 +210,7 @@ export function StoreSearch({ userId }: { userId: string }) {
                 ))}
               </ul>
               <p className="text-body-s text-secondary">
-                配達料は目安です。確定金額は注文時にご確認ください。メニューの閲覧・注文は準備中です。
+                配達料は目安です。確定金額は注文時にご確認ください。注文は準備中です。
               </p>
             </>
           ))}
