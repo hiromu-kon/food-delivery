@@ -131,11 +131,12 @@ export function StoreSearchScreen() {
                 deliveryFee={defaultCartDeliveryFee}
                 minimumOrderAmount={store.minimumOrderAmount}
                 distanceMeters={store.distanceMeters}
-                disabled
-                accessibilityRole="text"
+                accessibilityLabel={`${store.name}のメニューを見る`}
+                onPress={() =>
+                  router.push({ pathname: '/stores/[storeId]/menu', params: { storeId: store.id } })
+                }
               />
             ))}
-            <NoticeBanner>メニューの表示・注文機能は準備中です。</NoticeBanner>
           </>
         ))}
       {state.status === 'ready' && state.addresses.length > 0 && (
