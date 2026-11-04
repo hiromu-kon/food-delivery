@@ -47,6 +47,6 @@ Cookie の変更要求には既存 requireSession の Origin 検査を適用す�
 
 ## Web F-09 / Issue45 の利用
 
-ログインは `POST /auth/sign-in/email`、店舗画面へのアクセス判定は `GET /store/me`。`/auth/me` の role だけで店舗へのアクセスを許可しない。RPC 呼出しは `client.store.me.$get({ query: {} }, { init: { credentials: 'include' } })` を使う。SSR では受信 Cookie を転送し、応答の Set-Cookie を反映する。401 はログインへ、403 はアクセス不可とログアウトの案内へ進める。ネットワークエラーは認証失効と区別し、ページ表示・遷移・復帰時にも再確認する。
+ログインは `POST /auth/sign-in/email`、店舗画面へのアクセス判定は `GET /store/me`。`/auth/me` の role だけで店舗へのアクセスを許可しない。RPC 呼出しは `client.store.me.$get({ query: {} }, { init: { credentials: 'include' } })` を使う。SSR では受信 Cookie を転送する。RSC は Cookie を書けないため、更新は credentials include のブラウザ再確認で受けさせる（詳細は [店舗 Web 認証](store-auth-web.md)）。401 はログインへ、403 はアクセス不可とログアウトの案内へ進める。ネットワークエラーは認証失効と区別し、ページ表示・遷移・復帰時にも再確認する。
 
 専用 PostgreSQL による再現用の架空スタッフ発行手順と API 起動条件は worker の QA report に記録する。公開 seed や発行の仮 API は追加しない。
