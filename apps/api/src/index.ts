@@ -6,6 +6,7 @@ import { createApp } from './app';
 import { loadEnv } from './env';
 import { createAuthService } from './features/auth/auth.service';
 import { createOpenCageGeocoder } from './integrations/maps/opencage';
+import { createStripeClient } from './integrations/stripe/stripe';
 import { createSmtpSender } from './integrations/email/smtp';
 
 const env = loadEnv();
@@ -29,6 +30,7 @@ const email = createSmtpSender({
 const auth = createAuthService(db, email, config);
 const app = createApp({
   auth,
+  stripe: createStripeClient(env.STRIPE_SECRET_KEY),
   db,
   config,
   geocoder: createOpenCageGeocoder({
