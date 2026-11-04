@@ -1,5 +1,5 @@
 import type { MenuResponse } from '@repo/contract';
-import { formatYen } from '@repo/domain';
+import { defaultCartDeliveryFee, formatYen } from '@repo/domain';
 import { FoodPhoto } from '@/components/ui/food-photo';
 import { MenuItem } from '@/components/ui/menu-item';
 import { StoreNoren } from '@/components/ui/store-noren';
@@ -21,6 +21,10 @@ export function MenuContent({ menu }: { menu: MenuResponse }) {
       </div>
       <div className="space-y-3 px-6 py-4">
         <dl className="flex flex-wrap gap-x-8 gap-y-3">
+          <div>
+            <dt className="text-body-s text-secondary">配達料</dt>
+            <dd className="text-label-m mt-1">{formatYen(defaultCartDeliveryFee)}</dd>
+          </div>
           <div>
             <dt className="text-body-s text-secondary">最低注文</dt>
             <dd className="text-label-m mt-1">{formatYen(store.minimumOrderAmount)}</dd>
