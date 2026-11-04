@@ -7,10 +7,39 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { NoticeBanner } from '@/components/ui/notice-banner';
+import { useRouter } from 'next/navigation';
+import { calculateCartTotals } from '@repo/domain';
+import { CartBar } from '@/components/ui/cart-bar';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
+import { useCart } from '@/features/cart/cart-provider';
+import type { MenuProduct } from '@/features/cart/cart-state';
 import { MenuContent } from './menu-content';
 import { MenuError, MenuRequests, menuErrorMessage, readMenu } from './menu-state';
 
 export function StoreMenu({ storeId }: { storeId: string }) {
+  const router = useRouter();
+  const cart = useCart();
+  const [pending, setPending] = useState<{ menu: MenuResponse; item: MenuProduct }>();
+  const [cartMessage, setCartMessage] = useState('');
+  const totals = calculateCartTotals(cart.cart?.items ?? []);
+  const add = (currentMenu: MenuResponse, item: MenuProduct, confirmed = false) => {
+    const result = cart.actions.add(currentMenu.store, item, confirmed);
+    if (result === 'confirmation-required') setPending({ menu: currentMenu, item });
+    else
+      setCartMessage(
+        result === 'updated'
+          ? `${item.name}をカートに入れました。`
+          : '商品を追加できません。数量は1商品につき20点までです。',
+      );
+  };
   const [menu, setMenu] = useState<MenuResponse>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -85,7 +114,51 @@ export function StoreMenu({ storeId }: { storeId: string }) {
           </Button>
         </div>
       )}
-      {menu && menu.store.id === storeId && <MenuContent menu={menu} />}
+      {cart.notice && (
+        <NoticeBanner tone="warning" role="alert">
+          {cart.notice}
+        </NoticeBanner>
+      )}
+      <p role="status" className="text-body-s text-secondary px-4">
+        {cartMessage}
+      </p>
+      {menu && menu.store.id === storeId && (
+        <MenuContent menu={menu} cartReady={cart.ready} onAdd={(item) => add(menu, item)} />
+      )}
+      {cart.ready && totals.status === 'ok' && cart.cart && (
+        <div className="bg-base sticky bottom-0 z-20 mx-auto max-w-200 p-4">
+          <CartBar
+            count={cart.cart.items.reduce((count, item) => count + item.quantity, 0)}
+            subtotal={totals.subtotal}
+            onClick={() => router.push('/cart')}
+          />
+        </div>
+      )}
+      <AlertDialog
+        open={!!pending}
+        onOpenChange={(open) => {
+          if (!open) setPending(undefined);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>カートを空にしますか？</AlertDialogTitle>
+          <AlertDialogDescription>
+            カートには別のお店の商品が入っています。今の商品を外して、{pending?.menu.store.name}
+            の商品を入れます。
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pending) add(pending.menu, pending.item, true);
+                setPending(undefined);
+              }}
+            >
+              入れ替える
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
