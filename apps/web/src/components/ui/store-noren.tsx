@@ -3,11 +3,16 @@ import * as React from 'react';
 import { cn } from '@/lib/cn';
 
 function StoreNoren({
+  heading: Heading = 'h2',
   name,
   description,
   className,
   ...props
-}: Omit<React.ComponentProps<'div'>, 'children'> & { name: string; description?: string }) {
+}: Omit<React.ComponentProps<'div'>, 'children'> & {
+  name: string;
+  description?: string;
+  heading?: 'h1' | 'h2';
+}) {
   return (
     <div
       data-slot="store-noren"
@@ -17,7 +22,7 @@ function StoreNoren({
       )}
       {...props}
     >
-      <h2 className="text-display text-on-brand font-display break-words">{name}</h2>
+      <Heading className="text-display text-on-brand font-display break-words">{name}</Heading>
       {description && <p className="text-body-s text-on-brand-subtle mt-2">{description}</p>}
       <div className="absolute inset-x-0 bottom-0 flex h-5.5" aria-hidden>
         <div className="flex-1 border-r-2 border-(--background-color-base)" />
