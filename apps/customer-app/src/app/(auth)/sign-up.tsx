@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { apiClient } from '@/api/client';
-import { AuthScreen, FormError, useAuthAction, WebLink } from '@/features/auth/auth-screen';
+import { ScreenShell, FormError, useAuthAction, WebLink } from '@/features/auth/auth-screen';
 import { assertAuthSuccess } from '@/features/auth/request';
 
 export default function SignUpScreen() {
@@ -27,7 +27,7 @@ export default function SignUpScreen() {
   const form = useAuthAction();
   const resend = useAuthAction();
   return (
-    <AuthScreen title={registeredEmail ? 'メールを確認してください' : '会員登録'}>
+    <ScreenShell title={registeredEmail ? 'メールを確認してください' : '会員登録'}>
       {registeredEmail ? (
         <>
           <NoticeBanner>
@@ -61,6 +61,7 @@ export default function SignUpScreen() {
           <FormError message={form.error} />
           <TextField
             label="氏名"
+            helperText="配達員にお伝えします"
             value={values.name}
             onChangeText={(name) => setValues({ ...values, name })}
             autoComplete="name"
@@ -70,6 +71,7 @@ export default function SignUpScreen() {
           />
           <TextField
             label="メールアドレス"
+            helperText="確認のメールを送ります"
             value={values.email}
             onChangeText={(email) => setValues({ ...values, email })}
             autoCapitalize="none"
@@ -93,6 +95,7 @@ export default function SignUpScreen() {
           />
           <TextField
             label="電話番号"
+            helperText="配達のときに連絡することがあります"
             value={values.phoneNumber}
             onChangeText={(phoneNumber) => setValues({ ...values, phoneNumber })}
             keyboardType="phone-pad"
@@ -101,34 +104,28 @@ export default function SignUpScreen() {
             errorMessage={form.fields.phoneNumber ?? ''}
             editable={!form.pending}
           />
-          {(
-            [
-              { key: 'termsAccepted', title: '利用規約', path: '/terms' },
-              { key: 'privacyAccepted', title: 'プライバシーポリシー', path: '/privacy' },
-            ] as const
-          ).map(({ key, title, path }) => (
-            <View key={key} className="gap-2">
-              <View className="flex-row items-center gap-3">
-                <Checkbox
-                  checked={values[key]}
-                  onCheckedChange={(checked) => setValues({ ...values, [key]: checked })}
-                  disabled={form.pending}
-                  accessibilityLabel={`${title}に同意します`}
-                />
-                <Text
-                  onPress={() => !form.pending && setValues({ ...values, [key]: !values[key] })}
-                >
-                  {title}に同意します
-                </Text>
-              </View>
-              {form.fields[key] && (
-                <Text className="text-danger" variant="body-s">
-                  {form.fields[key]}
-                </Text>
-              )}
-              <WebLink path={path}>{`${title}を読む（ブラウザ）`}</WebLink>
+          <View className="gap-2">
+            <View className="flex-row items-center gap-3">
+              <Checkbox
+                checked={values.termsAccepted && values.privacyAccepted}
+                onCheckedChange={(checked) =>
+                  setValues({ ...values, termsAccepted: checked, privacyAccepted: checked })
+                }
+                disabled={form.pending}
+                accessibilityLabel="利用規約とプライバシーポリシーに同意します"
+              />
+              <Text className="flex-1">利用規約とプライバシーポリシーに同意します</Text>
             </View>
-          ))}
+            {(form.fields.termsAccepted || form.fields.privacyAccepted) && (
+              <Text className="text-danger" variant="body-s">
+                利用規約とプライバシーポリシーへの同意が必要です。
+              </Text>
+            )}
+            <View className="flex-row flex-wrap gap-2">
+              <WebLink path="/terms">利用規約</WebLink>
+              <WebLink path="/privacy">プライバシーポリシー</WebLink>
+            </View>
+          </View>
           <Button
             loading={form.pending}
             onPress={() => {
@@ -156,13 +153,13 @@ export default function SignUpScreen() {
               );
             }}
           >
-            同意して登録する
+            登録する
           </Button>
         </>
       )}
       <Button variant="ghost" onPress={() => router.replace('/login')}>
         ログイン画面へ
       </Button>
-    </AuthScreen>
+    </ScreenShell>
   );
 }

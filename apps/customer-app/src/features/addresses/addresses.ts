@@ -14,7 +14,10 @@ export type AddressTransport = {
   update: (id: string, input: AddressUpdate) => Promise<DeliveryAddress>;
   remove: (id: string) => Promise<void>;
 };
-type Editor = { original?: DeliveryAddress | undefined; values: AddressInput };
+type Editor = {
+  original?: DeliveryAddress | undefined;
+  values: Required<AddressInput>;
+};
 type State = {
   addresses: DeliveryAddress[];
   loaded: boolean;
@@ -26,9 +29,10 @@ type State = {
 export function changedFields(original: AddressInput, values: AddressInput): AddressUpdate | null {
   const next = addressInputSchema.parse(values);
   const patch: AddressUpdate = {};
-  for (const field of ['address', 'building', 'deliveryNote'] as const) {
+  for (const field of ['address', 'building', 'deliveryNote', 'label'] as const) {
     if (original[field] !== next[field]) patch[field] = next[field];
   }
+  if ((original.isDefault ?? false) !== next.isDefault) patch.isDefault = next.isDefault;
   return Object.keys(patch).length ? addressUpdateSchema.parse(patch) : null;
 }
 // 一覧・編集・削除を同じ排他制御に載せ、画面破棄後の応答も無効にする。
@@ -61,15 +65,17 @@ export class AddressesController {
         values: original
           ? {
               address: original.address,
+              label: original.label,
+              isDefault: original.isDefault,
               building: original.building,
               deliveryNote: original.deliveryNote,
             }
-          : { address: '', building: '', deliveryNote: '' },
+          : { address: '', building: '', deliveryNote: '', label: '', isDefault: false },
       },
       error: undefined,
     });
   };
-  change = (field: keyof AddressInput, value: string) => {
+  change = <Key extends keyof AddressInput>(field: Key, value: Required<AddressInput>[Key]) => {
     if (this.state.pending || !this.state.editor) return;
     this.publish({
       editor: { ...this.state.editor, values: { ...this.state.editor.values, [field]: value } },
@@ -103,19 +109,25 @@ export class AddressesController {
       const parsed = addressInputSchema.safeParse(editor.values);
       if (!parsed.success)
         return {
-          error: '住所は必須で200文字以内、建物名と配達メモは各100文字以内で入力してください。',
+          error:
+            '住所は必須で200文字以内、ラベルは20文字以内、建物名と配達メモは各100文字以内で入力してください。',
         };
       const patch = editor.original ? changedFields(editor.original, parsed.data) : null;
       if (editor.original && !patch) return { editor: undefined };
-      const address = editor.original
-        ? await this.transport.update(editor.original.id, patch!)
-        : await this.transport.create(parsed.data);
-      return {
-        addresses: editor.original
-          ? this.state.addresses.map((item) => (item.id === address.id ? address : item))
-          : [...this.state.addresses, address],
-        editor: undefined,
-      };
+      await (editor.original
+        ? this.transport.update(editor.original.id, patch!)
+        : this.transport.create(parsed.data));
+      try {
+        return { addresses: await this.transport.list(), loaded: true, editor: undefined };
+      } catch {
+        // 書込済みのフォームを再送させず、古い既定表示も残さない。
+        return {
+          addresses: [],
+          loaded: false,
+          editor: undefined,
+          error: '保存しましたが一覧を取得できませんでした。一覧を再読み込みしてください。',
+        };
+      }
     });
   remove = () =>
     this.run(async () => {

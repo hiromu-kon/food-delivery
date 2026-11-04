@@ -30,7 +30,7 @@ function OrderSteps({
           accessible
           accessibilityRole="text"
         >
-          <View className="h-6 w-full flex-row items-center" aria-hidden>
+          <View className="h-4 w-full flex-row items-center" aria-hidden>
             <View
               className={cn(
                 'h-0.75 flex-1',
@@ -54,19 +54,21 @@ function OrderSteps({
               )}
             />
           </View>
-          <Text
-            variant={step.state === 'current' ? 'label-s' : 'body-s'}
-            className={cn(
-              'text-center',
-              step.state === 'current'
-                ? 'text-brand'
-                : step.state === 'upcoming'
-                  ? 'text-secondary'
-                  : 'text-primary',
-            )}
-          >
-            {labels[step.status]}
-          </Text>
+          <View className="min-h-5 w-full items-center justify-center">
+            <Text
+              variant={step.state === 'current' ? 'label-s' : 'body-s'}
+              className={cn(
+                'text-center',
+                step.state === 'current'
+                  ? 'text-brand'
+                  : step.state === 'upcoming'
+                    ? 'text-secondary'
+                    : 'text-primary',
+              )}
+            >
+              {labels[step.status]}
+            </Text>
+          </View>
         </View>
       ))}
     </View>
