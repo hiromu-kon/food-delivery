@@ -11,19 +11,23 @@ export default function MemberLayout() {
         <Stack screenOptions={{ headerShown: false }} />
       </View>
       <SafeAreaView edges={['bottom']}>
-        <TabBar
-          app="customer"
-          value={
-            path === '/account' || path === '/addresses'
-              ? 'account'
-              : path === '/orders'
-                ? 'orders'
-                : 'home'
-          }
-          onValueChange={(value) =>
-            router.replace(value === 'account' ? '/account' : value === 'orders' ? '/orders' : '/')
-          }
-        />
+        {path !== '/checkout' && (
+          <TabBar
+            app="customer"
+            value={
+              path === '/account' || path === '/addresses'
+                ? 'account'
+                : path === '/orders'
+                  ? 'orders'
+                  : 'home'
+            }
+            onValueChange={(value) =>
+              router.replace(
+                value === 'account' ? '/account' : value === 'orders' ? '/orders' : '/',
+              )
+            }
+          />
+        )}
       </SafeAreaView>
     </View>
   );
