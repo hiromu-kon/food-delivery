@@ -17,10 +17,12 @@ MenuItemは写真URLがない場合に写真欄を省略し、追加ボタンを
 
 OrderStepsはbarの縦領域16px、同じ中心線に各circleと接続線を揃え、gap8でラベルを置く。ラベルは最小20pxの領域で中央揃えし、label-sとbody-sの異なる行高でも見た目の中心を揃える。現在circleの外径24pxとコードのラベル行高を保持するため、Penpot見本の全高38pxには固定しない。Select popupはcontrolから8px離す。BottomSheetはhandleの可視位置とheadingの間隔を整え、閉じるXと40px操作領域、ドラッグ、scrim、キーボード回避、環境のsafe area、modalとaccessibility escapeを維持する。headingは長文で伸長できる。
 
-SessionController・SecureStore・transport・住所/店舗Controllerの責務は変えない。認証/role判定、二重送信防止、失敗時の値保持、旧応答無効化、住所編集・削除後のfocus再取得、認証失効時の表示破棄は既存仕様通り。
+SessionController・SecureStore・transportの責務は変えない。住所/店舗Controllerはlabel/defaultの保存と選択優先順だけ拡張する。認証/role判定、二重送信防止、失敗時の値保持、旧応答無効化、住所編集・削除後のfocus再取得、認証失効時の表示破棄は既存仕様通り。
 
-## 今回扱わないモデルと機能
+## 保存値と対象外機能
 
-住所のlabelや既定状態は現在のDB/APIに存在しない。「自宅」「職場」「いつも使う」は表示せず、先頭住所を既定と表現しない。F04以降の注文業務、API/DB/contract、共有tokenの変更は含めない。
+住所のlabelとisDefaultはAPI応答を正本にする。カード先頭は非空labelをlabel-l（16px/700）で表示し、isDefault=trueだけ18pxの「いつも使う」Tagを同列gap8で付ける。先頭住所を自宅・既定と推測しない。任意labelと既定checkboxは登録・編集で実保存し、住所バー・シート・accountにも本人の保存値を反映する。F04以降の注文業務、API/DB/contract、共有tokenの変更は含めない。
 
 検証画像・UIシナリオ・fixtureと実行ログはrepo外に記録する。UI検証は専用Simulator、Metro8117、実createApp/API18797と専用PostgreSQL15434を使い、外部測位サービスのみDIする。課金APIや実地図は呼び出さない。Androidはexportの確認範囲とし、端末操作・VoiceOver全体の確認とは区別する。
+
+S-C04/10/11のJSON照合では390px画面の左右16px、住所バー64px、AppHeader56px、account行56px、住所カードpadding16px、label16px/700、Tag18pxとgap8を根拠とする。本文のコードtoken行高は保持し、ラベル・住所・建物・メモ・シート行は折り返して伸長する。account補助labelは幅50%以内で折り返し、共通部品を変更しない。
