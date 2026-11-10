@@ -4,9 +4,12 @@ import type { ErrorHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { HTTPException } from 'hono/http-exception';
 
+import { PaymentError } from '../integrations/stripe/client';
 import { GeocodingError } from '../integrations/maps/geocoder';
 
 const statusByDomainErrorCode = {
+  ORDER_NOT_ORDERABLE: 422,
+  IDEMPOTENCY_CONFLICT: 409,
   NOT_FOUND: 404,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
@@ -15,6 +18,11 @@ const statusByDomainErrorCode = {
 } as const satisfies Record<DomainErrorCode, ContentfulStatusCode>;
 
 export const errorHandler: ErrorHandler = (error, c) => {
+  if (error instanceof PaymentError)
+    return c.json(
+      { code: error.code, message: '決済を完了できませんでした' },
+      error.code === 'PAYMENT_FAILED' ? 402 : 503,
+    );
   if (error instanceof GeocodingError) {
     if (error.code === 'ADDRESS_NOT_FOUND')
       return c.json(
