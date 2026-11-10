@@ -11,6 +11,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/features/auth/session-provider';
+import { CartProvider } from '@/features/cart/cart-provider';
 import '../global.css';
 
 function SessionRoutes() {
@@ -93,7 +94,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ToastProvider>
         <SessionProvider>
-          <SessionRoutes />
+          <CartProvider>
+            <SessionRoutes />
+          </CartProvider>
           <StatusBar style="auto" />
           <PortalHost />
         </SessionProvider>

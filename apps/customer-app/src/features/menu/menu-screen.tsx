@@ -1,4 +1,8 @@
-import { defaultCartDeliveryFee, formatYen } from '@repo/domain';
+import { defaultCartDeliveryFee, formatYen, calculateCartTotals } from '@repo/domain';
+import { AlertDialog } from '@repo/native-ui/alert-dialog';
+import { CartBar } from '@/components/cart/cart-bar';
+import { useCart } from '@/features/cart/cart-provider';
+import type { CartProduct, CartStore } from '@/features/cart/cart';
 import { AppHeader } from '@repo/native-ui/app-header';
 import { Button } from '@repo/native-ui/button';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
@@ -17,6 +21,9 @@ import { useSession } from '@/features/auth/session-provider';
 import { MenuController } from './menu';
 
 export function MenuScreen() {
+  const { state: cart, controller: cartController } = useCart();
+  const [pending, setPending] = useState<{ store: CartStore; product: CartProduct }>();
+  const totals = calculateCartTotals(cart.cart);
   const { storeId: param } = useLocalSearchParams<{ storeId?: string | string[] }>();
   const storeId = typeof param === 'string' ? param : undefined;
   const { controller: session } = useSession();
@@ -47,6 +54,16 @@ export function MenuScreen() {
       : (menu?.categories[0]?.id ?? '');
   return (
     <ScreenShell
+      footer={
+        cart.ready &&
+        totals.status === 'ok' && (
+          <CartBar
+            count={cart.cart.reduce((sum, item) => sum + item.quantity, 0)}
+            subtotal={totals.subtotal}
+            onPress={() => router.push('/cart')}
+          />
+        )
+      }
       title="店舗のメニュー"
       contentClassName="gap-6"
       header={
@@ -78,6 +95,34 @@ export function MenuScreen() {
           再試行する
         </Button>
       )}
+      <FormError message={cart.error} />
+      {!cart.ready && !cart.busy && (
+        <Button
+          onPress={() => {
+            void cartController.restore();
+          }}
+        >
+          カートを再読み込みする
+        </Button>
+      )}
+      <AlertDialog
+        open={Boolean(pending)}
+        onOpenChange={(open) => {
+          if (!open) setPending(undefined);
+        }}
+        title="カートを入れ替えますか？"
+        description={`カートには${cart.store?.name ?? '別のお店'}の商品が入っています。今の商品を空にして、新しいお店の商品を入れます。`}
+        actionLabel="入れ替える"
+        cancelLabel="キャンセル"
+        loading={cart.busy}
+        onAction={() => {
+          if (pending) {
+            void cartController
+              .add(pending.store, pending.product, true)
+              .then(() => setPending(undefined));
+          }
+        }}
+      />
       {menu && (
         <>
           <View>
@@ -152,6 +197,28 @@ export function MenuScreen() {
                             description={item.description}
                             price={item.price}
                             soldOut={item.soldout}
+                            disabled={
+                              !cart.ready ||
+                              cart.busy ||
+                              !menu.store.isAcceptingOrders ||
+                              (cart.cart.find(
+                                (entry) =>
+                                  entry.restaurantId === menu.store.id &&
+                                  entry.productId === item.id,
+                              )?.quantity ?? 0) >= 20
+                            }
+                            onAdd={() => {
+                              if (item.soldout || !menu.store.isAcceptingOrders) return;
+                              const store = {
+                                id: menu.store.id,
+                                name: menu.store.name,
+                                minimumOrderAmount: menu.store.minimumOrderAmount,
+                              };
+                              void cartController.add(store, item).then((result) => {
+                                if (result === 'confirmation-required')
+                                  setPending({ store, product: item });
+                              });
+                            }}
                             {...(item.photoUrl ? { photoUrl: item.photoUrl } : {})}
                           />
                         ))}
