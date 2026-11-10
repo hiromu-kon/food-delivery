@@ -17,7 +17,7 @@ export default function MemberLayout() {
             value={
               path === '/account' || path === '/addresses'
                 ? 'account'
-                : path === '/orders'
+                : path === '/orders' || path.startsWith('/orders/')
                   ? 'orders'
                   : 'home'
             }
