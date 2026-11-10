@@ -119,6 +119,9 @@ export class LocalCart {
     });
     return 'updated';
   }
+  clear() {
+    this.save(null);
+  }
   setQuantity(productId: string, quantity: number) {
     const saved = this.state.cart;
     if (!saved) return;

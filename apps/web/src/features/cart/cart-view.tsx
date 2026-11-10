@@ -107,10 +107,15 @@ export function CartView() {
             </p>
           )}
           <div className="bg-base sticky bottom-0 z-20 mt-auto space-y-2 py-3">
-            <Button disabled className="w-full">
-              注文手続きに進む
-            </Button>
-            <p className="text-body-s text-secondary">注文・お支払いは現在準備中です。</p>
+            {orderability.status === 'orderable' ? (
+              <Button asChild className="w-full">
+                <Link href="/checkout">注文手続きに進む</Link>
+              </Button>
+            ) : (
+              <Button disabled className="w-full">
+                注文手続きに進む
+              </Button>
+            )}
           </div>
         </>
       )}
