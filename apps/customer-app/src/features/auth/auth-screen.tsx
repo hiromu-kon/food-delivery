@@ -1,34 +1,67 @@
+import { cn } from '@repo/native-ui/cn';
+import { AppHeader } from '@repo/native-ui/app-header';
 import { Button } from '@repo/native-ui/button';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
-import { Text } from '@repo/native-ui/text';
-import { Stack } from 'expo-router';
+import { router, Stack, useSegments } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { z } from 'zod';
 
 import { env } from '@/env';
 import { errorMessage } from './request';
 
-export function AuthScreen({ title, children }: { title: string; children: ReactNode }) {
+export function ScreenShell({
+  title,
+  children,
+  login = false,
+  header,
+  contentClassName,
+  headerRight,
+  footer,
+}: {
+  title: string;
+  children: ReactNode;
+  login?: boolean;
+  header?: ReactNode;
+  contentClassName?: string;
+  headerRight?: ReactNode;
+  footer?: ReactNode;
+}) {
+  const segments = useSegments();
+  const member = segments[0] === '(member)';
+  const onBack =
+    !member || segments.at(-1) === 'addresses'
+      ? () => {
+          if (router.canGoBack()) router.back();
+          else router.replace(member ? '/account' : '/login');
+        }
+      : undefined;
   return (
-    <KeyboardAvoidingView
-      className="bg-base flex-1"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Stack.Screen options={{ title }} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="grow px-6 py-8">
-        <View className="w-full max-w-lg self-center gap-6">
-          <View className="gap-2">
-            <Text variant="body-s" className="text-brand">
-              Food Delivery
-            </Text>
-            <Text variant="heading-l">{title}</Text>
-          </View>
-          {children}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <View className="bg-base flex-1">
+      <SafeAreaView edges={member ? ['top'] : ['top', 'bottom']} style={{ flex: 1 }}>
+        <Stack.Screen options={{ headerShown: false }} />
+        {header ??
+          (!login && (
+            <AppHeader title={title} right={headerRight} {...(onBack ? { onBack } : {})} />
+          ))}
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerClassName={login ? 'grow px-6 py-8' : 'grow p-4'}
+          >
+            <View className={cn('w-full max-w-lg self-center gap-4', contentClassName)}>
+              {children}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {footer && <View className="px-4 pb-3">{footer}</View>}
+      </SafeAreaView>
+    </View>
   );
 }
 

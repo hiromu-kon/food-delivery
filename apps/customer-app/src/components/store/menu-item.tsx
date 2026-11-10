@@ -15,7 +15,7 @@ type MenuItemProps = React.ComponentProps<typeof View> & {
   photoUrl?: string;
   soldOut?: boolean;
   disabled?: boolean;
-  onAdd: () => void;
+  onAdd?: () => void;
 };
 
 function MenuItem({
@@ -29,7 +29,7 @@ function MenuItem({
   className,
   ...props
 }: MenuItemProps) {
-  const addButton = !soldOut && (
+  const addButton = !soldOut && onAdd && (
     <AddButton accessibilityLabel={`${name}をカートに入れる`} disabled={disabled} onPress={onAdd} />
   );
   return (
@@ -47,17 +47,22 @@ function MenuItem({
           </Text>
         )}
         <View className="py-1">
-          {soldOut ? <Tag>売り切れ</Tag> : <Text variant="label-l">{formatYen(price)}</Text>}
+          <Text variant="label-l">{formatYen(price)}</Text>
+          {soldOut && <Tag>売り切れ</Tag>}
         </View>
       </View>
-      <View className="size-25">
-        <FoodPhoto
-          photoUrl={photoUrl}
-          label={`${name}の写真`}
-          className={cn('size-24', soldOut && 'opacity-45')}
-        />
-        <View className="absolute -right-0.75 -bottom-0.75">{addButton}</View>
-      </View>
+      {photoUrl ? (
+        <View className="size-25">
+          <FoodPhoto
+            photoUrl={photoUrl}
+            label={`${name}の写真`}
+            className={cn('size-24', soldOut && 'opacity-45')}
+          />
+          <View className="absolute -right-0.75 -bottom-0.75">{addButton}</View>
+        </View>
+      ) : (
+        <View className="self-center">{addButton}</View>
+      )}
     </View>
   );
 }

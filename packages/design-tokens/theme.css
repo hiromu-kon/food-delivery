@@ -75,6 +75,7 @@
   --border-color-default: var(--palette-gray-200);
   --border-color-strong: var(--palette-gray-300);
   --border-color-focus: var(--palette-indigo-500);
+  --border-color-warning: var(--palette-yellow-300);
   --border-color-danger: var(--palette-red-500);
 }
 

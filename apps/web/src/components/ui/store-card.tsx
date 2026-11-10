@@ -6,7 +6,7 @@ import { Tag } from '@/components/ui/tag';
 import { cn } from '@/lib/cn';
 
 type StoreCardProps = {
-  href: string;
+  href?: string;
   name: string;
   photoUrl?: string;
   paused?: boolean;
@@ -26,12 +26,15 @@ function StoreCard({
   distanceMeters,
   className,
 }: StoreCardProps) {
+  const Container = href ? Link : 'article';
   return (
-    <Link
-      href={href}
+    <Container
+      href={href!}
       data-slot="store-card"
       className={cn(
-        'flex min-w-0 flex-col gap-3 rounded-md outline-none hover:opacity-80 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-(--border-color-focus)',
+        'flex min-w-0 flex-col gap-3 rounded-md outline-none',
+        href &&
+          'hover:opacity-80 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-(--border-color-focus)',
         className,
       )}
     >
@@ -60,7 +63,7 @@ function StoreCard({
           </div>
         ))}
       </div>
-    </Link>
+    </Container>
   );
 }
 

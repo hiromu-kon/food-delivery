@@ -1,15 +1,12 @@
 'use client';
 
-import {
-  addressInputSchema,
-  addressSchema,
-  type AddressInput,
-  type DeliveryAddress,
-} from '@repo/contract';
+import { addressInputSchema, addressSchema, type DeliveryAddress } from '@repo/contract';
 import { useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tag } from '@/components/ui/tag';
 import { TextField } from '@/components/ui/text-field';
 import { NoticeBanner } from '@/components/ui/notice-banner';
 import {
@@ -29,8 +26,9 @@ import {
   changedAddress,
 } from './address-state';
 
-const empty: AddressInput = { address: '', building: '', deliveryNote: '' };
+const empty = { address: '', building: '', deliveryNote: '', label: '', isDefault: false };
 const fields = [
+  { name: 'label', label: 'お届け先の名前', max: 20, helper: '自宅・職場など（任意、20文字以内）' },
   {
     name: 'address',
     label: '住所（必須）',
@@ -50,6 +48,7 @@ export function AddressesManager({
 }) {
   const [addresses, setAddresses] = useState(initialAddresses);
   const [values, setValues] = useState(empty);
+  const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<DeliveryAddress | null>(null);
   const [deleting, setDeleting] = useState<DeliveryAddress | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,6 +56,7 @@ export function AddressesManager({
   const [notice, setNotice] = useState('');
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [listUnavailable, setListUnavailable] = useState(!!initialError);
   const requests = useRef(new AddressRequests());
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -74,6 +74,7 @@ export function AddressesManager({
     setError(addressErrorMessage(cause));
   }
   function reset() {
+    setFormOpen(false);
     setEditing(null);
     setValues(empty);
     setErrors({});
@@ -89,7 +90,10 @@ export function AddressesManager({
       const response = await apiClient.addresses.$get();
       assertAddressSuccess(response);
       const result = z.object({ addresses: z.array(addressSchema) }).parse(await response.json());
-      if (requests.current.current(generation)) setAddresses(result.addresses);
+      if (requests.current.current(generation)) {
+        setAddresses(result.addresses);
+        setListUnavailable(false);
+      }
     } catch (cause) {
       if (requests.current.current(generation)) fail(cause);
     } finally {
@@ -127,14 +131,18 @@ export function AddressesManager({
         ? await apiClient.addresses[':id'].$patch({ param: { id: editing.id }, json: changes! })
         : await apiClient.addresses.$post({ json: parsed.data });
       assertAddressSuccess(response);
-      const result = z.object({ address: addressSchema }).parse(await response.json());
-      setAddresses((current) =>
-        editing
-          ? current.map((item) => (item.id === editing.id ? result.address : item))
-          : [...current, result.address],
-      );
-      setNotice(editing ? 'お届け先を変更しました。' : 'お届け先を登録しました。');
+      z.object({ address: addressSchema }).parse(await response.json());
       reset();
+      setNotice(editing ? 'お届け先を変更しました。' : 'お届け先を登録しました。');
+      // 既定切替は他の住所にも影響するため、正本の一覧を取り直す。
+      // 再取得に失敗したときも古い既定Tagを表示し続けない。
+      setAddresses([]);
+      setListUnavailable(true);
+      const listResponse = await apiClient.addresses.$get();
+      assertAddressSuccess(listResponse);
+      const list = z.object({ addresses: z.array(addressSchema) }).parse(await listResponse.json());
+      setAddresses(list.addresses);
+      setListUnavailable(false);
     } catch (cause) {
       fail(cause);
     } finally {
@@ -164,16 +172,16 @@ export function AddressesManager({
     }
   }
   return (
-    <div className="space-y-8">
+    <div className="space-y-3">
       {error && (
         <NoticeBanner tone="danger" role="alert">
           {error}
         </NoticeBanner>
       )}
-      <p role="status" className="text-body-m text-secondary">
+      <p role="status" className="text-body-m text-secondary empty:hidden">
         {notice}
       </p>
-      <section aria-labelledby="addresses-list" className="space-y-4">
+      <section aria-labelledby="addresses-list" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="addresses-list" className="text-heading-m">
             登録済みのお届け先
@@ -190,32 +198,44 @@ export function AddressesManager({
         </div>
         {!addresses.length && (
           <p className="text-body-m text-secondary">
-            {initialError && error
+            {listUnavailable
               ? '一覧を取得できていません。再読み込みしてください。'
-              : 'お届け先はまだ登録されていません。下のフォームから登録できます。'}
+              : 'お届け先はまだ登録されていません。下のボタンから登録できます。'}
           </p>
         )}
-        <ul className="space-y-4">
+        <ul className="space-y-3">
           {addresses.map((item) => (
             <li key={item.id} className="rounded-lg border p-4 space-y-3">
               <div className="text-body-m space-y-1 break-words">
-                <h3 className="font-bold">{item.address}</h3>
-                {item.building && <p>{item.building}</p>}
+                {(item.label || item.isDefault) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {item.label && <p className="text-label-l break-all">{item.label}</p>}
+                    {item.isDefault && <Tag>いつも使う</Tag>}
+                  </div>
+                )}
+                <h3>
+                  {item.address}
+                  {item.building && ` ${item.building}`}
+                </h3>
                 {item.deliveryNote && (
-                  <p className="text-secondary whitespace-pre-wrap">
+                  <p className="text-body-s text-secondary whitespace-pre-wrap">
                     配達メモ：{item.deliveryNote}
                   </p>
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="M"
+                  className="px-0 underline underline-offset-4"
                   disabled={pending}
                   aria-label={`${item.address}を編集`}
                   onClick={() => {
+                    setFormOpen(true);
                     setEditing(item);
                     setValues({
+                      label: item.label,
+                      isDefault: item.isDefault,
                       address: item.address,
                       building: item.building,
                       deliveryNote: item.deliveryNote,
@@ -223,61 +243,88 @@ export function AddressesManager({
                     setErrors({});
                     setError(null);
                     setNotice('');
-                    formRef.current?.querySelector<HTMLInputElement>('[name="address"]')?.focus();
+                    requestAnimationFrame(() =>
+                      formRef.current?.querySelector<HTMLInputElement>('[name="address"]')?.focus(),
+                    );
                   }}
                 >
-                  編集
+                  変更する
                 </Button>
                 <Button
                   variant="ghost"
                   size="M"
+                  className="text-secondary px-0 underline underline-offset-4"
                   disabled={pending}
                   aria-label={`${item.address}を削除`}
                   onClick={() => setDeleting(item)}
                 >
-                  削除
+                  削除する
                 </Button>
               </div>
             </li>
           ))}
         </ul>
       </section>
-      <section aria-labelledby="address-form-title" className="space-y-5">
-        <h2 id="address-form-title" className="text-heading-m">
-          {editing ? 'お届け先を編集' : 'お届け先を登録'}
-        </h2>
-        <form
-          ref={formRef}
-          onSubmit={(event) => void submit(event)}
-          noValidate
-          className="space-y-5"
+      {!formOpen && (
+        <Button
+          variant="secondary"
+          className="w-full"
+          disabled={pending}
+          onClick={() => {
+            setFormOpen(true);
+            requestAnimationFrame(() =>
+              formRef.current?.querySelector<HTMLInputElement>('[name="address"]')?.focus(),
+            );
+          }}
         >
-          {fields.map((field) => (
-            <TextField
-              key={field.name}
-              name={field.name}
-              label={field.label}
-              helperText={field.helper}
-              errorMessage={errors[field.name]}
-              value={values[field.name]}
-              required={field.name === 'address'}
-              disabled={pending}
-              autoComplete={field.name === 'address' ? 'street-address' : 'off'}
-              onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
-            />
-          ))}
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" loading={pending}>
-              {editing ? '変更を保存' : '登録する'}
-            </Button>
-            {editing && (
-              <Button type="button" variant="secondary" disabled={pending} onClick={reset}>
-                編集をキャンセル
+          お届け先を追加する
+        </Button>
+      )}
+      {formOpen && (
+        <section aria-labelledby="address-form-title" className="space-y-5">
+          <h2 id="address-form-title" className="text-heading-m">
+            {editing ? 'お届け先を編集' : 'お届け先を登録'}
+          </h2>
+          <form
+            ref={formRef}
+            onSubmit={(event) => void submit(event)}
+            noValidate
+            className="space-y-5"
+          >
+            {fields.map((field) => (
+              <TextField
+                key={field.name}
+                name={field.name}
+                label={field.label}
+                helperText={field.helper}
+                errorMessage={errors[field.name]}
+                value={values[field.name]}
+                required={field.name === 'address'}
+                disabled={pending}
+                autoComplete={field.name === 'address' ? 'street-address' : 'off'}
+                onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
+              />
+            ))}
+            <label className="flex items-center gap-3 text-body-m">
+              <Checkbox
+                name="isDefault"
+                checked={values.isDefault}
+                disabled={pending}
+                onCheckedChange={(checked) => setValues({ ...values, isDefault: checked === true })}
+              />
+              このお届け先をいつも使う
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" loading={pending}>
+                {editing ? '変更を保存' : '登録する'}
               </Button>
-            )}
-          </div>
-        </form>
-      </section>
+              <Button type="button" variant="secondary" disabled={pending} onClick={reset}>
+                キャンセル
+              </Button>
+            </div>
+          </form>
+        </section>
+      )}
       <AlertDialog
         open={!!deleting}
         onOpenChange={(open) => {
