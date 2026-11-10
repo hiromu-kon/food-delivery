@@ -71,15 +71,17 @@ async function cookieFor(token: string) {
   return `better-auth.session_token=${encodeURIComponent(`${token}.${signature}`)}`;
 }
 function request(path = '', method = 'GET', body?: unknown, cookie?: string) {
-  return app.request(`${config.baseURL}/addresses${path}`, {
-    method,
-    headers: {
-      'content-type': 'application/json',
-      origin: config.webURL,
-      ...(cookie ? { cookie } : {}),
-    },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+  return Promise.resolve(
+    app.request(`${config.baseURL}/addresses${path}`, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        origin: config.webURL,
+        ...(cookie ? { cookie } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
+  );
 }
 async function create(cookie: string) {
   const response = await request('', 'POST', input, cookie);
@@ -147,6 +149,226 @@ describe('お届け先 API（PostgreSQL + HTTP adapter）', () => {
     expect((await request(`/${saved.id}`, 'DELETE', undefined, cookie)).status).toBe(200);
     expect((await request(`/${saved.id}`, 'GET', undefined, cookie)).status).toBe(404);
     expect(await db.select().from(addresses)).toEqual([]);
+  });
+
+  it('labelはtrimしたUTF-16の20単位まで、isDefaultはbooleanだけを許可する', async () => {
+    const cookie = await cookieFor((await seed()).token);
+    const saved = await create(cookie);
+    expect(saved).toMatchObject({ label: '', isDefault: false });
+    http.mockClear();
+    for (const label of ['  職場  ', 'あ'.repeat(20), '😀'.repeat(10), '   ']) {
+      const response = await request(`/${saved.id}`, 'PATCH', { label }, cookie);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ address: { label: label.trim() } });
+    }
+    for (const invalid of [
+      { label: 'あ'.repeat(21) },
+      { label: `${'😀'.repeat(10)}a` },
+      { label: String.fromCharCode(0) },
+      { label: null },
+      { label: 1 },
+      { isDefault: null },
+      { isDefault: 'true' },
+      { isDefault: 1 },
+    ]) {
+      expect((await request('', 'POST', { ...input, ...invalid }, cookie)).status).toBe(400);
+      expect((await request(`/${saved.id}`, 'PATCH', invalid, cookie)).status).toBe(400);
+    }
+    expect(http).not.toHaveBeenCalled();
+    const response = await request(
+      '',
+      'POST',
+      { ...input, label: ' 自宅 ', isDefault: true },
+      cookie,
+    );
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ address: { label: '自宅', isDefault: true } });
+  });
+
+  it('既定切替は本人内だけで原子的に行い、解除・削除後も既定なしを許可する', async () => {
+    const owner = await seed();
+    const cookie = await cookieFor(owner.token);
+    const first = await create(cookie);
+    const second = await create(cookie);
+    const otherCookie = await cookieFor((await seed()).token);
+    const other = await create(otherCookie);
+    expect((await request(`/${other.id}`, 'PATCH', { isDefault: true }, otherCookie)).status).toBe(
+      200,
+    );
+    http.mockClear();
+    for (const target of [first, second]) {
+      expect((await request(`/${target.id}`, 'PATCH', { isDefault: true }, cookie)).status).toBe(
+        200,
+      );
+      expect(
+        (await db.select().from(addresses).where(eq(addresses.userId, owner.id)))
+          .filter((row) => row.isDefault)
+          .map((row) => row.id),
+      ).toEqual([target.id]);
+    }
+    expect((await request(`/${second.id}`, 'PATCH', { label: '職場' }, cookie)).status).toBe(200);
+    expect((await request(`/${other.id}`, 'PATCH', { isDefault: true }, cookie)).status).toBe(404);
+    expect((await request(`/${randomUUID()}`, 'PATCH', { isDefault: true }, cookie)).status).toBe(
+      404,
+    );
+    expect(
+      (await request(`/${second.id}`, 'GET', undefined, cookie)).headers.get('cache-control'),
+    ).toBe('no-store');
+    expect((await request(`/${second.id}`, 'PATCH', { isDefault: false }, cookie)).status).toBe(
+      200,
+    );
+    expect(
+      (await db.select().from(addresses).where(eq(addresses.userId, owner.id))).every(
+        (row) => !row.isDefault,
+      ),
+    ).toBe(true);
+    await request(`/${first.id}`, 'PATCH', { isDefault: true }, cookie);
+    expect((await request(`/${first.id}`, 'DELETE', undefined, cookie)).status).toBe(200);
+    expect(
+      (await db.select().from(addresses).where(eq(addresses.userId, owner.id))).every(
+        (row) => !row.isDefault,
+      ),
+    ).toBe(true);
+    expect(
+      (await db.select().from(addresses).where(eq(addresses.id, other.id)))[0]?.isDefault,
+    ).toBe(true);
+    expect(http).not.toHaveBeenCalled();
+  });
+
+  it('同時の既定作成・切替・削除で500や二重既定を発生させず他人を保持する', async () => {
+    const owner = await seed();
+    const cookie = await cookieFor(owner.token);
+    const otherCookie = await cookieFor((await seed()).token);
+    const other = await create(otherCookie);
+    await request(`/${other.id}`, 'PATCH', { isDefault: true }, otherCookie);
+    const created = await Promise.all(
+      [1, 2].map(() => request('', 'POST', { ...input, isDefault: true }, cookie)),
+    );
+    expect(created.map((response) => response.status)).toEqual([201, 201]);
+    const rows = await db.select().from(addresses).where(eq(addresses.userId, owner.id));
+    expect(rows.filter((row) => row.isDefault)).toHaveLength(1);
+    const ids = rows.map((row) => row.id);
+    for (let round = 0; round < 5; round++) {
+      const responses = await Promise.all(
+        ids.map((id) => request(`/${id}`, 'PATCH', { isDefault: true }, cookie)),
+      );
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+      expect(
+        (await db.select().from(addresses).where(eq(addresses.userId, owner.id))).filter(
+          (row) => row.isDefault,
+        ),
+      ).toHaveLength(1);
+    }
+    const target = ids[0]!;
+    const raced = await Promise.all([
+      request(`/${target}`, 'DELETE', undefined, cookie),
+      request(`/${target}`, 'PATCH', { isDefault: true }, cookie),
+      request(`/${other.id}`, 'PATCH', { isDefault: true }, cookie),
+    ]);
+    expect(raced[0]?.status).toBe(200);
+    expect([200, 404]).toContain(raced[1]?.status);
+    expect(raced[2]?.status).toBe(404);
+    expect(
+      (await db.select().from(addresses).where(eq(addresses.userId, owner.id))).filter(
+        (row) => row.isDefault,
+      ).length,
+    ).toBeLessThanOrEqual(1);
+    expect(
+      (await db.select().from(addresses).where(eq(addresses.id, other.id)))[0]?.isDefault,
+    ).toBe(true);
+  });
+
+  it('測位失敗では別住所の既定を解除せず、測位中の削除後も既定を変更しない', async () => {
+    const cookie = await cookieFor((await seed()).token);
+    const first = await create(cookie);
+    const second = await create(cookie);
+    await request(`/${first.id}`, 'PATCH', { isDefault: true }, cookie);
+    http.mockResolvedValueOnce(Response.json({ status: { code: 200 }, results: [] }));
+    expect(
+      (await request(`/${second.id}`, 'PATCH', { address: '不明住所', isDefault: true }, cookie))
+        .status,
+    ).toBe(422);
+    http.mockResolvedValueOnce(Response.json({ status: { code: 200 }, results: [] }));
+    expect((await request('', 'POST', { ...input, isDefault: true }, cookie)).status).toBe(422);
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let finish!: (response: Response) => void;
+    http.mockImplementationOnce(() => {
+      started();
+      return new Promise<Response>((resolve) => {
+        finish = resolve;
+      });
+    });
+    const pending = request(
+      `/${second.id}`,
+      'PATCH',
+      { address: '新しい住所', isDefault: true },
+      cookie,
+    );
+    await entered;
+    expect((await request(`/${second.id}`, 'DELETE', undefined, cookie)).status).toBe(200);
+    finish(Response.json(success));
+    expect((await pending).status).toBe(404);
+    expect(
+      (await db.select().from(addresses)).map((row) => ({ id: row.id, isDefault: row.isDefault })),
+    ).toEqual([{ id: first.id, isDefault: true }]);
+  });
+
+  it('測位中の差分PATCHを保持し、競合する住所更新も住所と座標を一組で保存する', async () => {
+    const cookie = await cookieFor((await seed()).token);
+    const saved = await create(cookie);
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let finish!: (response: Response) => void;
+    http.mockImplementationOnce(() => {
+      started();
+      return new Promise<Response>((resolve) => {
+        finish = resolve;
+      });
+    });
+    const slow = request(`/${saved.id}`, 'PATCH', { address: '遅い住所', isDefault: true }, cookie);
+    await entered;
+    expect(
+      (
+        await request(
+          `/${saved.id}`,
+          'PATCH',
+          { label: '職場', deliveryNote: '保持するメモ' },
+          cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await request(`/${saved.id}`, 'PATCH', { address: '速い住所' }, cookie)).status).toBe(
+      200,
+    );
+    finish(
+      Response.json({
+        ...success,
+        results: [{ ...success.results[0], geometry: { lat: 34, lng: 135 } }],
+      }),
+    );
+    expect((await slow).status).toBe(200);
+    expect((await db.select().from(addresses))[0]).toMatchObject({
+      address: '遅い住所',
+      latitude: 34,
+      longitude: 135,
+      label: '職場',
+      deliveryNote: '保持するメモ',
+      isDefault: true,
+    });
+  });
+
+  it('DBのpartial unique indexが直接書き込みでも同一ユーザーの二重既定を拒否する', async () => {
+    const owner = await seed();
+    const values = { ...input, userId: owner.id, latitude: 35, longitude: 139, isDefault: true };
+    await db.insert(addresses).values(values);
+    await expect(db.insert(addresses).values(values)).rejects.toThrow();
+    await db.insert(addresses).values({ ...values, isDefault: false });
+    await db.insert(addresses).values({ ...values, userId: (await seed()).id });
   });
 
   it('R-15 PATCHは住所を省略すると地図APIを呼ばず指定項目だけを変更する', async () => {
@@ -341,7 +563,16 @@ describe('お届け先 API（PostgreSQL + HTTP adapter）', () => {
 
   it('HTTP送信は住所だけを送り建物・メモ・所有者・キーを応答へ露出しない', async () => {
     const owner = await seed();
-    await create(await cookieFor(owner.token));
+    expect(
+      (
+        await request(
+          '',
+          'POST',
+          { ...input, label: '職場', isDefault: true },
+          await cookieFor(owner.token),
+        )
+      ).status,
+    ).toBe(201);
     const [url, init] = http.mock.calls[0] ?? [];
     expect(url).toBeInstanceOf(URL);
     if (!(url instanceof URL)) throw new Error('URLを渡してください');
