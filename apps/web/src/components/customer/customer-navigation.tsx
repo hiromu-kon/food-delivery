@@ -8,6 +8,7 @@ export function CustomerNavigation() {
   const pathname = usePathname();
   const items = [
     { href: '/', label: 'お店を探す', current: pathname === '/' },
+    { href: '/cart', label: 'カート', current: pathname === '/cart' },
     {
       href: '/account',
       label: 'アカウント',
