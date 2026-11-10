@@ -13,6 +13,8 @@
 - 受付停止中の店舗も読める（R-09）。売り切れの商品も除外せず返す（R-10）。店舗受付状態・商品売り切れ状態は毎回DBを参照する。
 - 成功・エラーとも `Cache-Control: no-store`。地図APIなどの外部サービスは呼ばない。
 
+店舗スタッフによる受付状態の変更は [受付の切替（F-12）](store-acceptance.md) を参照する。
+
 ## 保存・公開項目
 
 `menu_categories` は `id`（UUID）、`storeId`、`name`、`description`（初期値空文字）、`photoUrl`（nullable）、`sortOrder`（非負整数・初期値0）を保存する。
