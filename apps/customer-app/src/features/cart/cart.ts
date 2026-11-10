@@ -152,6 +152,15 @@ export class CartController {
       },
     ]);
   };
+  clear = async () => {
+    if (!this.state.ready || this.state.busy)
+      throw new Error('カートの保存中です。再試行してください。');
+    const result = await this.commit({ status: 'updated', cart: [] }, null, []);
+    if (result !== 'updated')
+      throw new Error(
+        '注文は受付済みですが、カートを更新できません。同じ内容で再試行してください。',
+      );
+  };
   setQuantity = async (productId: string, quantity: number) => {
     if (!this.state.ready || this.state.busy) return 'busy';
     return this.commit(

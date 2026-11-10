@@ -20,10 +20,12 @@ export function CartScreen() {
         state.ready &&
         state.cart.length > 0 && (
           <View className="gap-2">
-            <Button disabled>注文内容の確認へ</Button>
-            <Text variant="body-s" className="text-secondary text-center">
-              注文内容の確認は準備中です。
-            </Text>
+            <Button
+              disabled={state.busy || orderability.status !== 'orderable'}
+              onPress={() => router.push('/checkout')}
+            >
+              注文内容の確認へ
+            </Button>
           </View>
         )
       }
