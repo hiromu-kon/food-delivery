@@ -47,6 +47,80 @@ describe('お届け先操作', () => {
       }),
     ).toBeNull();
   });
+  it('labelと既定を編集値に保持し、他項目だけのPATCHでリセットしない', async () => {
+    const { controller, transport } = setup();
+    const saved = { ...address, label: '自宅', isDefault: true };
+    controller.edit(saved);
+    expect(controller.getSnapshot().editor?.values).toMatchObject({
+      label: '自宅',
+      isDefault: true,
+    });
+    controller.change('building', '202');
+    await controller.save();
+    expect(transport.update).toHaveBeenCalledWith(saved.id, { building: '202' });
+    controller.edit(saved);
+    controller.change('label', '');
+    controller.change('isDefault', false);
+    await controller.save();
+    expect(transport.update).toHaveBeenLastCalledWith(saved.id, { label: '', isDefault: false });
+  });
+  it('既定切替後はAPI一覧を再取得し、他の住所の既定解除を反映する', async () => {
+    const { controller, transport } = setup();
+    const other = { ...address, id: 'other', label: '職場', isDefault: false };
+    const current = { ...address, label: '自宅', isDefault: true };
+    transport.list.mockResolvedValueOnce([current, other]);
+    await controller.load();
+    controller.edit(other);
+    controller.change('isDefault', true);
+    transport.list.mockResolvedValueOnce([
+      { ...current, isDefault: false },
+      { ...other, isDefault: true },
+    ]);
+    await controller.save();
+    expect(controller.getSnapshot().addresses.map((item) => item.isDefault)).toEqual([false, true]);
+  });
+  it.each(['create', 'update'] as const)(
+    '%s成功後のGET失敗は旧既定とフォームを消し再送せず再読込できる',
+    async (operation) => {
+      const { controller, transport } = setup();
+      transport.list.mockResolvedValueOnce([{ ...address, label: '旧既定', isDefault: true }]);
+      await controller.load();
+      controller.edit(operation === 'update' ? address : undefined);
+      controller.change('address', '新しい住所');
+      controller.change('isDefault', true);
+      transport.list.mockRejectedValueOnce(new AuthRequestError('再試行', '', 503));
+      await controller.save();
+      expect(controller.getSnapshot()).toMatchObject({
+        addresses: [],
+        editor: undefined,
+        loaded: false,
+        pending: false,
+      });
+      expect(controller.getSnapshot().error).toContain('保存しました');
+      await controller.save();
+      expect(transport[operation]).toHaveBeenCalledTimes(1);
+      await controller.load();
+      expect(controller.getSnapshot()).toMatchObject({ addresses: [address], loaded: true });
+    },
+  );
+  it('labelはUTF16で20文字まで、失敗入力と既定指定を保持する', async () => {
+    const { controller, transport } = setup();
+    controller.edit();
+    controller.change('address', address.address);
+    controller.change('label', '😀'.repeat(11));
+    controller.change('isDefault', true);
+    await controller.save();
+    expect(transport.create).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().editor?.values).toMatchObject({
+      label: '😀'.repeat(11),
+      isDefault: true,
+    });
+    controller.change('label', '😀'.repeat(10));
+    await controller.save();
+    expect(transport.create).toHaveBeenCalledWith(
+      expect.objectContaining({ label: '😀'.repeat(10), isDefault: true }),
+    );
+  });
   it('無変更ならAPIを呼ばない', async () => {
     const { controller, transport } = setup();
     controller.edit(address);
@@ -134,6 +208,20 @@ describe('お届け先操作', () => {
     controller.reset();
     gate.resolve([address]);
     await loading;
+    expect(controller.getSnapshot()).toEqual({ addresses: [], loaded: false, pending: false });
+  });
+  it('保存後の一覧再取得中に失効・破棄すると旧labelと既定を復活させない', async () => {
+    const { controller, transport } = setup();
+    await controller.load();
+    controller.edit(address);
+    controller.change('isDefault', true);
+    const gate = deferred<DeliveryAddress[]>();
+    transport.list.mockReturnValueOnce(gate.promise);
+    const saving = controller.save();
+    await vi.waitFor(() => expect(transport.list).toHaveBeenCalledTimes(2));
+    controller.reset();
+    gate.resolve([{ ...address, label: '旧応答', isDefault: true }]);
+    await saving;
     expect(controller.getSnapshot()).toEqual({ addresses: [], loaded: false, pending: false });
   });
   it('再読込失敗でも直前の一覧を残す', async () => {

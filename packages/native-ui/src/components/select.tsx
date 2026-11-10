@@ -75,7 +75,7 @@ function SelectContent({
             className,
           )}
           position="popper"
-          sideOffset={4}
+          sideOffset={8}
           {...props}
         >
           <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>

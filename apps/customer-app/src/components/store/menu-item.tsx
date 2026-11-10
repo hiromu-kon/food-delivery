@@ -50,14 +50,18 @@ function MenuItem({
           {soldOut ? <Tag>売り切れ</Tag> : <Text variant="label-l">{formatYen(price)}</Text>}
         </View>
       </View>
-      <View className="size-25">
-        <FoodPhoto
-          photoUrl={photoUrl}
-          label={`${name}の写真`}
-          className={cn('size-24', soldOut && 'opacity-45')}
-        />
-        <View className="absolute -right-0.75 -bottom-0.75">{addButton}</View>
-      </View>
+      {photoUrl ? (
+        <View className="size-25">
+          <FoodPhoto
+            photoUrl={photoUrl}
+            label={`${name}の写真`}
+            className={cn('size-24', soldOut && 'opacity-45')}
+          />
+          <View className="absolute -right-0.75 -bottom-0.75">{addButton}</View>
+        </View>
+      ) : (
+        <View className="self-center">{addButton}</View>
+      )}
     </View>
   );
 }

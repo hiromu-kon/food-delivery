@@ -71,17 +71,18 @@ function BottomSheet({ open, onOpenChange, title, children, className }: BottomS
             style={{ transform: [{ translateY: offset }], paddingBottom: insets.bottom + 12 }}
           >
             <View
-              className="h-7 items-center justify-center"
+              className="h-8 items-center justify-center"
               {...panResponder.panHandlers}
               aria-hidden
             >
               <View className="bg-(--border-color-strong) h-1 w-10 rounded-full" />
             </View>
-            <View className="mb-4 flex-row items-center gap-3">
-              <Text nativeID={id} variant="heading-m" role="heading" className="flex-1">
+            <View className="mb-4 min-h-10 justify-center pr-12">
+              <Text nativeID={id} variant="heading-l" role="heading">
                 {title}
               </Text>
               <IconButton
+                className="absolute right-0"
                 icon={X}
                 accessibilityLabel="閉じる"
                 onPress={() => onOpenChange(false)}

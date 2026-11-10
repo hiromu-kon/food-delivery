@@ -1,12 +1,14 @@
 import { signInSchema, emailSchema } from '@repo/contract';
 import { Button } from '@repo/native-ui/button';
 import { NoticeBanner } from '@repo/native-ui/notice-banner';
+import { Text } from '@repo/native-ui/text';
+import { View } from 'react-native';
 import { TextField } from '@repo/native-ui/text-field';
 import { router } from 'expo-router';
 import { useState } from 'react';
 
 import { apiClient } from '@/api/client';
-import { AuthScreen, FormError, useAuthAction } from '@/features/auth/auth-screen';
+import { ScreenShell, FormError, useAuthAction } from '@/features/auth/auth-screen';
 import { assertAuthSuccess } from '@/features/auth/request';
 import { useSession } from '@/features/auth/session-provider';
 
@@ -18,7 +20,13 @@ export default function LoginScreen() {
   const form = useAuthAction();
   const resend = useAuthAction();
   return (
-    <AuthScreen title="ログイン">
+    <ScreenShell title="ログイン" login>
+      <View className="items-center gap-2 py-8">
+        <Text variant="display" className="text-brand" style={{ fontSize: 30 }}>
+          Food Delivery
+        </Text>
+        <Text className="text-secondary">近くのお店の料理を、お届けします</Text>
+      </View>
       {state.status === 'anonymous' && state.message && (
         <NoticeBanner>{state.message}</NoticeBanner>
       )}
@@ -59,9 +67,12 @@ export default function LoginScreen() {
       <Button variant="ghost" onPress={() => router.push('/forgot-password')}>
         パスワードを忘れた方
       </Button>
-      <Button variant="secondary" onPress={() => router.push('/sign-up')}>
-        会員登録する
-      </Button>
+      <View className="border-default gap-4 border-t pt-6">
+        <Text className="text-secondary text-center">はじめての方</Text>
+        <Button variant="secondary" onPress={() => router.push('/sign-up')}>
+          会員登録する
+        </Button>
+      </View>
       <FormError message={resend.error} />
       {sent && (
         <NoticeBanner>
@@ -83,6 +94,6 @@ export default function LoginScreen() {
       >
         確認メールを送り直す
       </Button>
-    </AuthScreen>
+    </ScreenShell>
   );
 }

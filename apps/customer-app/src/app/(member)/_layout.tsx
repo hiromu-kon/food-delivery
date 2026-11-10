@@ -8,7 +8,7 @@ export default function MemberLayout() {
   return (
     <View className="bg-base flex-1">
       <View className="flex-1">
-        <Stack />
+        <Stack screenOptions={{ headerShown: false }} />
       </View>
       <SafeAreaView edges={['bottom']}>
         <TabBar
