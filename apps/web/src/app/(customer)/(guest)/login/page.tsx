@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: 'ログイン | Food Delivery' };
 async function LoginContent({ searchParams }: PageProps<'/login'>) {
   const query = await searchParams;
   return (
-    <AuthShell title="ログイン" description="いつものお店の味を、ご自宅へ。">
+    <AuthShell login title="Food Delivery" description="近くのお店の料理を、お届けします">
       <LoginForm verified={query.verified === 'true'} />
     </AuthShell>
   );

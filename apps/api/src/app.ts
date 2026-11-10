@@ -4,6 +4,10 @@ import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
 
+import { createOrderRoutes } from './features/orders/orders.routes';
+import { createStripeClient } from './integrations/stripe/stripe';
+import type { StripeClient } from './integrations/stripe/client';
+import { createStoreAuthRoutes } from './features/store-auth/store-auth.routes';
 import { createAddressRoutes } from './features/addresses/addresses.routes';
 import { createStoreRoutes } from './features/stores/stores.routes';
 import { createOpenCageGeocoder } from './integrations/maps/opencage';
@@ -16,6 +20,7 @@ import { errorHandler } from './middleware/error-handler';
 
 export function createApp(options: {
   auth: AuthService;
+  stripe?: StripeClient;
   geocoder?: Geocoder;
   db: Db;
   config: AuthConfig;
@@ -27,7 +32,7 @@ export function createApp(options: {
       cors({
         origin: options.config.webURL,
         credentials: true,
-        allowHeaders: ['Content-Type', 'Authorization'],
+        allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
         allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
         exposeHeaders: ['set-auth-token', 'x-request-id', 'retry-after'],
       }),
@@ -44,8 +49,18 @@ export function createApp(options: {
     })
     .onError(errorHandler)
     .notFound((c) => c.json({ code: 'NOT_FOUND', message: '見つかりません' }, 404))
+    .route(
+      '/orders',
+      createOrderRoutes(
+        options.auth,
+        options.db,
+        options.config,
+        options.stripe ?? createStripeClient(),
+      ),
+    )
     .route('/health', healthRoutes)
     .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
+    .route('/store', createStoreAuthRoutes(options.auth, options.db, options.config))
     .route('/auth', createAuthRoutes(options.auth, options.db, options.config))
     .route(
       '/addresses',

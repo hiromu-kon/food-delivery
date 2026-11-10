@@ -22,6 +22,10 @@ export const envSchema = z
       .toLowerCase()
       .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/)
       .optional(),
+    STRIPE_SECRET_KEY: z
+      .string()
+      .regex(/^sk_test_[a-zA-Z0-9]+$/)
+      .optional(),
     OPENCAGE_API_KEY: z.string().trim().min(1).optional(),
     GEOCODING_TIMEOUT_MS: z.coerce.number().int().min(1).max(30000).default(5000),
     SMTP_HOST: z.string().min(1).default('localhost'),
