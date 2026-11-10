@@ -76,14 +76,17 @@ function DrawerContent({
             suppressClick.current = false;
           }}
         >
-          <span className="h-1 w-10 rounded-full bg-(--border-color-strong)" aria-hidden />
+          <span
+            className="h-1 w-10 translate-y-0.5 rounded-full bg-(--border-color-strong)"
+            aria-hidden
+          />
         </button>
         <DialogPrimitive.Close asChild>
-          <IconButton ref={closeRef} aria-label="閉じる" className="absolute top-10 right-2">
+          <IconButton ref={closeRef} aria-label="閉じる" className="absolute top-9 right-2">
             <XIcon />
           </IconButton>
         </DialogPrimitive.Close>
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pt-3">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-4">
           {children}
         </div>
       </DialogPrimitive.Content>

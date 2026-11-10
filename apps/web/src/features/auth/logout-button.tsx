@@ -1,8 +1,9 @@
 'use client';
 
 import { z } from 'zod';
+import { LogOutIcon } from 'lucide-react';
 import { apiClient } from '@/api/client';
-import { Button } from '@/components/ui/button';
+import { ListItem } from '@/components/ui/list-item';
 import { assertAuthSuccess, FormError, useAuthForm } from './auth-form';
 
 export function LogoutButton() {
@@ -14,9 +15,14 @@ export function LogoutButton() {
   return (
     <form onSubmit={(event) => void form.onSubmit(event)} className="space-y-4">
       <FormError error={form.error} />
-      <Button type="submit" variant="secondary" className="w-full" loading={form.pending}>
-        ログアウトする
-      </Button>
+      <ListItem
+        title={form.pending ? 'ログアウト中…' : 'ログアウトする'}
+        icon={<LogOutIcon />}
+        tone="danger"
+        chevron={false}
+        disabled={form.pending}
+        onClick={(event) => event.currentTarget.form?.requestSubmit()}
+      />
     </form>
   );
 }

@@ -16,6 +16,7 @@ import { VerificationForm } from './login-form';
 
 export function SignUpForm() {
   const id = useId();
+  const [accepted, setAccepted] = useState(false);
   const [email, setEmail] = useState<string>();
   const form = useAuthForm(signUpSchema, async (data, element) => {
     await assertAuthSuccess(await apiClient.auth['sign-up'].email.$post({ json: data }));
@@ -48,6 +49,7 @@ export function SignUpForm() {
       <TextField
         name="name"
         label="氏名"
+        helperText="配達員にお伝えします"
         autoComplete="name"
         maxLength={100}
         required
@@ -57,6 +59,7 @@ export function SignUpForm() {
         name="email"
         label="メールアドレス"
         type="email"
+        helperText="確認のメールを送ります"
         inputMode="email"
         autoComplete="email"
         maxLength={254}
@@ -87,44 +90,35 @@ export function SignUpForm() {
       />
       <input type="hidden" name="termsVersion" value={legalDocumentVersions.terms} />
       <input type="hidden" name="privacyVersion" value={legalDocumentVersions.privacy} />
-      <div className="space-y-4 border-t pt-6">
-        <p className="text-body-s text-secondary">内容を確認して、同意してください。</p>
-        {[
-          { name: 'termsAccepted', title: '利用規約', href: '/terms' },
-          { name: 'privacyAccepted', title: 'プライバシーポリシー', href: '/privacy' },
-        ].map(({ name, title, href }) => (
-          <div key={name}>
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id={`${id}-${name}`}
-                data-field={name}
-                name={name}
-                required
-                aria-invalid={Boolean(form.fields[name])}
-                aria-describedby={form.fields[name] ? `${id}-${name}-error` : undefined}
-              />
-              <div className="space-y-2">
-                <Label htmlFor={`${id}-${name}`}>{title}に同意します</Label>
-                <Link
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-body-s text-brand underline underline-offset-4"
-                >
-                  {title}を読む（新しいタブ）
-                </Link>
-              </div>
-            </div>
-            {form.fields[name] && (
-              <p id={`${id}-${name}-error`} className="text-body-s text-danger mt-2">
-                {form.fields[name]}
-              </p>
-            )}
-          </div>
-        ))}
+      <input type="hidden" name="termsAccepted" value={accepted ? 'on' : ''} />
+      <input type="hidden" name="privacyAccepted" value={accepted ? 'on' : ''} />
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id={`${id}-consent`}
+            data-field="termsAccepted"
+            checked={accepted}
+            onCheckedChange={(checked) => setAccepted(checked === true)}
+            required
+            aria-invalid={Boolean(form.fields.termsAccepted || form.fields.privacyAccepted)}
+            aria-describedby={`${id}-consent-error`}
+          />
+          <Label htmlFor={`${id}-consent`}>利用規約とプライバシーポリシーに同意する</Label>
+        </div>
+        <div className="text-body-s text-brand flex flex-wrap gap-x-4 gap-y-2">
+          <Link href="/terms" target="_blank" rel="noopener noreferrer" className="underline">
+            利用規約を読む（新しいタブ）
+          </Link>
+          <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">
+            プライバシーポリシーを読む（新しいタブ）
+          </Link>
+        </div>
+        <p id={`${id}-consent-error`} className="text-body-s text-danger">
+          {form.fields.termsAccepted || form.fields.privacyAccepted}
+        </p>
       </div>
       <Button type="submit" className="w-full" loading={form.pending}>
-        同意して登録する
+        登録する
       </Button>
       <p className="text-body-s text-brand text-center">
         <Link href="/login" className="underline underline-offset-4">

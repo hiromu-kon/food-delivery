@@ -42,15 +42,17 @@ function MenuItem({
           {soldOut ? <Tag>売り切れ</Tag> : <p className="text-label-l">{formatYen(price)}</p>}
         </div>
       </div>
-      <div className="relative size-25 shrink-0">
-        <FoodPhoto
-          photoUrl={photoUrl}
-          alt={`${name}の写真`}
-          className={cn('size-24', soldOut && 'opacity-45')}
-        />
+      <div className={cn('relative shrink-0', photoUrl ? 'size-25' : 'self-center')}>
+        {photoUrl && (
+          <FoodPhoto
+            photoUrl={photoUrl}
+            alt={`${name}の写真`}
+            className={cn('size-24', soldOut && 'opacity-45')}
+          />
+        )}
         {!soldOut && (
           <AddButton
-            className="absolute -right-0.75 -bottom-0.75"
+            className={photoUrl ? 'absolute -right-0.75 -bottom-0.75' : undefined}
             aria-label={`${name}をカートに入れる`}
             disabled={disabled}
             onClick={onAdd}

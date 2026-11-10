@@ -10,7 +10,7 @@ import { requireCustomer } from '@/features/auth/session';
 export const instant = false;
 
 export default async function AddressesPage() {
-  await requireCustomer();
+  const user = await requireCustomer();
   let addresses: DeliveryAddress[] = [];
   let error: string | null = null;
   const client = await createServerApiClient();
@@ -27,8 +27,8 @@ export default async function AddressesPage() {
   if (response?.status === 401) redirect('/login');
   if (response?.status === 403) redirect('/access-denied');
   return (
-    <AuthShell title="お届け先の管理" description="住所・建物名・配達メモを登録できます。">
-      <AddressesManager initialAddresses={addresses} initialError={error} />
+    <AuthShell title="お届け先" backHref="/account">
+      <AddressesManager key={user.id} initialAddresses={addresses} initialError={error} />
     </AuthShell>
   );
 }
