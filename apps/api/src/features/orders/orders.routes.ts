@@ -1,3 +1,4 @@
+import { orderIdSchema } from '@repo/contract';
 import { zValidator } from '@hono/zod-validator';
 import type { Db } from '@repo/db';
 import { Hono } from 'hono';
@@ -18,6 +19,16 @@ export function createOrderRoutes(
   return new Hono<AuthEnv>()
     .use(requireSession(auth, db, [config.webURL, new URL(config.baseURL).origin]))
     .use(requireRole(['customer'], true))
+    .get('/', async (c) => c.json({ orders: await service.list(c.get('authUser').id) }, 200))
+    .get(
+      '/:id',
+      zValidator('param', orderIdSchema, (result, c) => {
+        if (!result.success)
+          return c.json({ code: 'VALIDATION_ERROR', message: '入力内容を確認してください' }, 400);
+      }),
+      async (c) =>
+        c.json({ order: await service.get(c.get('authUser').id, c.req.valid('param').id) }, 200),
+    )
     .post(
       '/',
       zValidator('json', checkoutSchema, (result, c) => {

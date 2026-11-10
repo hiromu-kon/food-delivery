@@ -1,3 +1,4 @@
+import { customerOrderDetailSchema, customerOrderSummarySchema } from '@repo/contract';
 import type { Db } from '@repo/db';
 import { DomainError } from '@repo/domain';
 import { PaymentError, type StripeClient } from '../../integrations/stripe/client';
@@ -22,6 +23,21 @@ export function createOrderService(
   repository = createOrderRepository(db),
 ) {
   return {
+    async list(userId: string) {
+      const rows = await repository.listForCustomer(userId);
+      return rows.map((row) =>
+        customerOrderSummarySchema.parse({ ...row, createdAt: row.createdAt.toISOString() }),
+      );
+    },
+    async get(userId: string, id: string) {
+      const order = await repository.detailForCustomer(userId, id);
+      if (!order) throw new DomainError('NOT_FOUND', '注文が見つかりません');
+      return customerOrderDetailSchema.parse({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        deliveryPhotoUrl: null,
+      });
+    },
     async checkout(userId: string, key: string, raw: CheckoutInput) {
       const input = checkoutSchema.parse(raw);
       input.items.sort((a, b) => a.menuItemId.localeCompare(b.menuItemId));

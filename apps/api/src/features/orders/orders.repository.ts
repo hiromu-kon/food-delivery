@@ -16,8 +16,18 @@ import {
   DomainError,
   isWithinDeliveryRadius,
 } from '@repo/domain';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { CheckoutInput } from './orders.schema';
+
+// Customer summary projection excludes payment, address, and internal attempt fields.
+const customerOrderColumns = {
+  id: orders.id,
+  storeId: orders.storeId,
+  storeName: stores.name,
+  status: orders.status,
+  total: orders.total,
+  createdAt: orders.createdAt,
+};
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 const reject = () => {
@@ -29,6 +39,42 @@ const reject = () => {
 
 export function createOrderRepository(db: Db) {
   return {
+    async listForCustomer(userId: string) {
+      return db
+        .select(customerOrderColumns)
+        .from(orders)
+        .innerJoin(stores, eq(stores.id, orders.storeId))
+        .where(eq(orders.userId, userId))
+        .orderBy(desc(orders.createdAt), desc(orders.id));
+    },
+    async detailForCustomer(userId: string, id: string) {
+      const [order] = await db
+        .select({
+          ...customerOrderColumns,
+          subtotal: orders.subtotal,
+          deliveryFee: orders.deliveryFee,
+          fulfillment: orders.fulfillment,
+          address: orders.address,
+          building: orders.building,
+          dropoffLocation: orders.dropoffLocation,
+        })
+        .from(orders)
+        .innerJoin(stores, eq(stores.id, orders.storeId))
+        .where(and(eq(orders.userId, userId), eq(orders.id, id)));
+      if (!order) return undefined;
+      const items = await db
+        .select({
+          menuItemId: orderItems.menuItemId,
+          name: orderItems.name,
+          unitPrice: orderItems.unitPrice,
+          quantity: orderItems.quantity,
+        })
+        .from(orderItems)
+        .innerJoin(orders, eq(orders.id, orderItems.orderId))
+        .where(and(eq(orders.userId, userId), eq(orders.id, id)))
+        .orderBy(orderItems.menuItemId);
+      return { ...order, items };
+    },
     transaction: <T>(action: (tx: Tx) => Promise<T>) => db.transaction(action),
     async quote(tx: Tx, userId: string, input: CheckoutInput): Promise<CheckoutQuote> {
       // Locks are retained through authorization and commit; concurrent pause/soldout/price edits wait.
