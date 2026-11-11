@@ -6,3 +6,4 @@ export * from './menu';
 export * from './store-auth';
 export * from './store-acceptance';
 export * from './menu-management';
+export * from './orders';

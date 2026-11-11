@@ -9,6 +9,7 @@ import { GeocodingError } from '../integrations/maps/geocoder';
 
 const statusByDomainErrorCode = {
   ORDER_NOT_ORDERABLE: 422,
+  ORDER_NOT_CANCELABLE: 409,
   IDEMPOTENCY_CONFLICT: 409,
   NOT_FOUND: 404,
   UNAUTHORIZED: 401,

@@ -103,6 +103,23 @@ afterAll(async () => {
 });
 
 describe('受付切替 API（実 PostgreSQL）', () => {
+  it('店舗本人の受付状態を取得し、更新後の再取得と認証拒否を確認する', async () => {
+    const target = await store();
+    const staff = await account(target.id);
+    const read = () => app.request('/store/acceptance', { headers: { cookie: staff.cookie } });
+    expect((await app.request('/store/acceptance')).status).toBe(401);
+    const initial = await read();
+    expect(initial.status).toBe(200);
+    expect(await initial.json()).toEqual({
+      store: { id: target.id, isAcceptingOrders: target.isAcceptingOrders },
+    });
+    expect((await patch(staff.cookie)).status).toBe(200);
+    expect(await (await read()).json()).toEqual({
+      store: { id: target.id, isAcceptingOrders: false },
+    });
+    await db.delete(storeStaffMemberships).where(eq(storeStaffMemberships.userId, staff.id));
+    expect((await read()).status).toBe(403);
+  });
   it('R-09 Cookie / 署名 Bearer / RPC で所属店舗だけを false・true にし、同値の再送も成功する', async () => {
     const target = await store();
     const other = await store();

@@ -186,7 +186,13 @@ function CheckoutContent({ attempt, attemptKey }: { attempt: Attempt | null; att
         </Text>
         <Text selectable>注文番号：{state.order.id}</Text>
         <Text>お店の受付をお待ちください。</Text>
-        <Button onPress={() => router.replace('/')}>お店を探す</Button>
+        <Button
+          onPress={() =>
+            router.replace({ pathname: '/orders/[orderId]', params: { orderId: state.order!.id } })
+          }
+        >
+          注文状況を見る
+        </Button>
       </ScreenShell>
     );
   return (

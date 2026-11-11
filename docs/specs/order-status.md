@@ -59,3 +59,29 @@ stateDiagram-v2
 | 店舗が断った         | `store_rejected` |
 | 受付期限切れ         | `expired`        |
 | 運営がキャンセルした | `admin`          |
+
+## 注文者向け参照 API（F-07）
+
+Cookie または Bearer のセッション認証が必要。確認済みメールアドレスを持つ注文者のみ利用でき、応答は `Cache-Control: no-store` とする。
+
+| エンドポイント    | 応答型（`@repo/contract`）                                          | 用途                                                                                            |
+| ----------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `GET /orders`     | `CustomerOrderListResponse`（`{ orders: CustomerOrderSummary[] }`） | S-C09。進行中を含む自分の全注文を作成日時の降順、同日時は ID の降順で返す。注文がなければ空配列 |
+| `GET /orders/:id` | `CustomerOrderDetailResponse`（`{ order: CustomerOrderDetail }`）   | S-C08。自分の注文だけを返す                                                                     |
+
+`CustomerOrderSummary`（別名 `OrderSummary`）は `id`, `storeId`, `storeName`, `status`, `total`, `createdAt`（UTC ISO 8601）を持つ。店舗名は現在の店舗名、金額は注文時の値。
+`CustomerOrderDetail`（別名 `OrderDetail`）はさらに `address`, `building`, `fulfillment`（`hand_delivery` / `leave_at_door`）, `dropoffLocation`（`front_door` / `delivery_box` / `other` / `null`）, `subtotal`, `deliveryFee`, `items`（`menuItemId`, 注文時の `name`, `unitPrice`, `quantity`）, `deliveryPhotoUrl`（URL または `null`）を持つ。金額は円の整数。
+
+状態は上表の6種類をそのまま返す。S-C08 の「取り消す」は `status === 'pending'` の間だけ表示する（取消操作 API は F-08）。置き配写真は配達完了後だけ表示する契約だが、現在は写真の永続化が未実装のため `deliveryPhotoUrl` は常に `null`。状態変更日時も未保存のため返さない。
+
+不正な注文 ID は `400 VALIDATION_ERROR`、存在しない注文と他人の注文は同じ `404 NOT_FOUND`。未認証は `401 UNAUTHORIZED`、注文者以外・メール未確認・利用停止は既存の認証ルールに従う。注文・明細とも認証ユーザー ID で絞り込み、決済 ID・Stripe 情報・ユーザー ID・座標・内部処理用の値は返さない。
+
+## 注文者による取消 API（F-08 / R-07）
+
+`POST /orders/:id/cancel` は参照 API と同じ認証・認可・ID 検証を使う。本文・冪等キーは不要。同じ注文 ID への再送で再試行できる。成功は `200 CustomerOrderCancellationResponse`（`{ order: { id, status: 'canceled' } }`）。受付後・配達完了・注文者以外の理由で取り消された注文は `409 ORDER_NOT_CANCELABLE`。
+
+注文行を `FOR UPDATE` でロックし、所有者と状態を照合して、`canceled` と理由 `customer` を先にコミットする。その後、再び同じ行をロックして Stripe の manual 仮売上を取り消し、確認済み日時 `paymentVoidedAt` を保存する。店舗受付を実装するときも、同じ注文行をロックし、`pending` を確認してから売上確定する必要がある。
+
+Stripe 取消が未確認の間も注文は `canceled` のまま受付できない。取消失敗・通信断・不明な決済状態では `503 PAYMENT_RECONCILIATION_REQUIRED` を返し、成功とは扱わない。注文者は同じ API を再送して復旧できる。再送では PaymentIntent を取得し、既に取消済みなら重ねて取り消さず確認済み日時を保存する。Stripe 成功後に DB が失敗した場合も同じ手順で復旧する。確認済みなら Stripe を呼ばず成功を返す。自動再試行ジョブは本 API の対象外。
+
+取消前に PaymentIntent ID、通貨、金額、manual capture、未確定の全額仮売上を照合する。売上確定済み等の想定外の状態は自動で返金せず、上記 503 として調査・再照合を必要とする。

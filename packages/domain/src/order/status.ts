@@ -1,3 +1,5 @@
+import { DomainError } from '../errors';
+
 export const orderStatuses = [
   'pending',
   'preparing',
@@ -21,4 +23,10 @@ const transitions: Record<OrderStatus, readonly OrderStatus[]> = {
 /** Structural transitions only; actor/payment preconditions belong to the API. */
 export function canTransitionOrder(from: OrderStatus, to: OrderStatus): boolean {
   return transitions[from].includes(to);
+}
+
+/** A customer cancellation may be replayed after reserving the transition. */
+export function assertCustomerCancellation(status: OrderStatus, reason: string | null): void {
+  if (status !== 'pending' && !(status === 'canceled' && reason === 'customer'))
+    throw new DomainError('ORDER_NOT_CANCELABLE', '受付待ちの注文だけ取り消せます');
 }
