@@ -150,7 +150,7 @@ export function CheckoutView() {
         <p>お店の受付をお待ちください。</p>
         <p className="text-body-s break-all">注文番号：{orderId}</p>
         <Button asChild>
-          <Link href="/">お店を探す</Link>
+          <Link href={`/orders/${encodeURIComponent(orderId)}`}>注文状況を見る</Link>
         </Button>
       </section>
     );

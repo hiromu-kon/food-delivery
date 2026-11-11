@@ -8,6 +8,7 @@ export function CustomerNavigation() {
   const pathname = usePathname();
   const items = [
     { href: '/', label: 'お店を探す', current: pathname === '/' },
+    { href: '/orders', label: '注文履歴', current: pathname.startsWith('/orders') },
     { href: '/cart', label: 'カート', current: pathname === '/cart' },
     {
       href: '/account',
@@ -20,7 +21,7 @@ export function CustomerNavigation() {
       <CustomerHeader items={items} />
       <nav
         aria-label="注文者メニュー"
-        className="text-label-m flex min-h-12 items-center gap-6 border-b px-4 md:hidden"
+        className="text-label-m flex min-h-12 flex-wrap items-center gap-x-6 border-b px-4 md:hidden"
       >
         {items.map((item) => (
           <Link
