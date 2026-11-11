@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { OrderDetail } from '@repo/contract';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,18 +31,17 @@ export function OrderCancellation({
   unavailable: boolean;
 }) {
   const key = `order-cancellation:${order.id}`;
-  const [uncertain, setUncertain] = useState(false);
+  const [uncertain, setUncertain] = useState(() => {
+    try {
+      return sessionStorage.getItem(key) === 'pending';
+    } catch {
+      return false;
+    }
+  });
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const locked = useRef(false);
-  useEffect(() => {
-    try {
-      setUncertain(sessionStorage.getItem(key) === 'pending');
-    } catch {
-      /* Storage is optional. */
-    }
-  }, [key]);
   function remember(value: boolean) {
     setUncertain(value);
     try {

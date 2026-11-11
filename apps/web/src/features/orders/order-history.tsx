@@ -15,7 +15,7 @@ export function OrderHistory() {
   return (
     <div className="space-y-4">
       {loading && <p role="status">注文履歴を読み込んでいます…</p>}
-      {error && <ResourceFeedback error={error} retry={retry} />}
+      {error && <ResourceFeedback error={error} retry={() => void retry()} />}
       {data &&
         (data.length ? (
           <ul className="divide-y">

@@ -16,7 +16,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   return (
     <div className="space-y-6">
       {loading && <p role="status">注文状況を読み込んでいます…</p>}
-      {error && <ResourceFeedback error={error} retry={retry} />}
+      {error && <ResourceFeedback error={error} retry={() => void retry()} />}
       {order && (
         <>
           <section className="space-y-4" aria-label="現在の注文状況">
