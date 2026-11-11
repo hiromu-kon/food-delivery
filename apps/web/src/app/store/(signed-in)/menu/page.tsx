@@ -1,6 +1,7 @@
+import { MenuManagement } from '@/features/menu-management/menu-management';
 import { requireStoreContext } from '@/features/store-auth/session';
 
-export default async function StorePlaceholderPage() {
-  await requireStoreContext();
-  return <h1 className="text-heading-l">メニュー</h1>;
+export default async function StoreMenuPage() {
+  const context = await requireStoreContext();
+  return <MenuManagement key={`${context.user.id}:${context.store.id}`} />;
 }
