@@ -16,6 +16,7 @@ export const customerOrderSummarySchema = z.object({
   id: z.uuid(),
   storeId: z.uuid(),
   storeName: z.string(),
+  storePhotoUrl: z.url().nullable(),
   status: orderStatusSchema,
   total: z.number().int().nonnegative(),
   createdAt: z.iso.datetime(),
@@ -60,10 +61,12 @@ export type CustomerOrderCancellationResponse = z.infer<
   typeof customerOrderCancellationResponseSchema
 >;
 
-export const storeOrderSummarySchema = customerOrderSummarySchema.omit({ storeName: true }).extend({
-  acceptanceDeadline: z.iso.datetime(),
-  paymentReconciling: z.boolean(),
-});
+export const storeOrderSummarySchema = customerOrderSummarySchema
+  .omit({ storeName: true, storePhotoUrl: true })
+  .extend({
+    acceptanceDeadline: z.iso.datetime(),
+    paymentReconciling: z.boolean(),
+  });
 export const storeOrderDetailSchema = storeOrderSummarySchema.extend({
   items: z.array(customerOrderItemSchema),
   subtotal: z.number().int().nonnegative(),

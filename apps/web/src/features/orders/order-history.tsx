@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ReceiptTextIcon } from 'lucide-react';
 import { formatYen } from '@repo/domain';
 import { Button } from '@/components/ui/button';
+import { FoodPhoto } from '@/components/ui/food-photo';
 import { EmptyState } from '@/components/ui/empty-state';
 import { StatusLabel } from '@/components/ui/status-label';
 import { getOrders } from './requests';
@@ -25,6 +26,12 @@ export function OrderHistory() {
                   href={`/orders/${encodeURIComponent(order.id)}`}
                   className="hover:bg-subtle flex min-h-22 items-center justify-between gap-3 py-4 outline-offset-4"
                 >
+                  <FoodPhoto
+                    photoUrl={order.storePhotoUrl ?? undefined}
+                    alt=""
+                    sizes="56px"
+                    className="size-14 shrink-0"
+                  />
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="text-label-l break-words">{order.storeName}</p>
                     <div className="text-body-s text-secondary flex flex-wrap gap-x-3 gap-y-1">

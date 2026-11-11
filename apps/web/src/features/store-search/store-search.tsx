@@ -210,7 +210,7 @@ export function StoreSearch({ userId }: { userId: string }) {
                 ))}
               </ul>
               <p className="text-body-s text-secondary">
-                配達料は目安です。確定金額は注文時にご確認ください。注文は準備中です。
+                配達料は目安です。確定金額は注文時にご確認ください。
               </p>
             </>
           ))}

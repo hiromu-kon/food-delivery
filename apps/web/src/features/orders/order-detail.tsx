@@ -14,21 +14,35 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   const load = useCallback((signal: AbortSignal) => getOrder(orderId, signal), [orderId]);
   const { data: order, loading, error, retry } = useOrdersResource(load, true);
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {loading && <p role="status">注文状況を読み込んでいます…</p>}
       {error && <ResourceFeedback error={error} retry={() => void retry()} />}
       {order && (
         <>
-          <section className="space-y-4" aria-label="現在の注文状況">
+          <section
+            className="bg-brand-subtle space-y-3 rounded-lg px-4 py-5"
+            aria-label="現在の注文状況"
+          >
             <div role="status">
               <StatusLabel status={order.status} />
             </div>
+            <h2 className="text-heading-l">
+              {
+                {
+                  pending: 'お店の受付を待っています',
+                  preparing: 'お店で調理しています',
+                  ready: 'お料理の準備ができました',
+                  delivering: 'お届け先に向かっています',
+                  delivered: 'お届けしました',
+                  canceled: '注文はキャンセルされました',
+                }[order.status]
+              }
+            </h2>
             <OrderSteps status={order.status} />
             <p className="text-body-s text-secondary">
               この画面を開いている間、15秒ごとに更新します。
             </p>
           </section>
-          <OrderCancellation key={order.id} order={order} refresh={retry} unavailable={!!error} />
           <section className="space-y-3 border-t pt-5" aria-labelledby="order-items-heading">
             <h2 id="order-items-heading" className="text-heading-m">
               注文内容
@@ -61,6 +75,20 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               </div>
             </dl>
           </section>
+          <section className="space-y-1" aria-labelledby="delivery-heading">
+            <h2 id="delivery-heading" className="text-label-l">
+              お届け先
+            </h2>
+            <p className="text-body-s text-secondary break-words">
+              {[order.address, order.building].filter(Boolean).join(' ')}
+            </p>
+            <p className="text-body-s text-secondary">
+              {order.fulfillment === 'hand_delivery'
+                ? '手渡し'
+                : `置き配（${order.dropoffLocation ? { front_door: '玄関前', delivery_box: '宅配ボックス', other: 'その他' }[order.dropoffLocation] : '置き場所未指定'}）`}
+            </p>
+          </section>
+          <OrderCancellation key={order.id} order={order} refresh={retry} unavailable={!!error} />
           {order.status === 'delivered' && order.fulfillment === 'leave_at_door' && (
             <section className="space-y-3 border-t pt-5" aria-labelledby="delivery-photo-heading">
               <h2 id="delivery-photo-heading" className="text-heading-m">

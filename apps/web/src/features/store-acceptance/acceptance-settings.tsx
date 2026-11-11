@@ -108,12 +108,12 @@ export function AcceptanceSettings() {
   }
 
   return (
-    <section className="w-full max-w-160 space-y-6" aria-labelledby="settings-title">
+    <section className="w-full max-w-180 space-y-6" aria-labelledby="settings-title">
       <h1 id="settings-title" className="text-heading-l">
         店舗の設定
       </h1>
       {store && <p className="text-heading-m wrap-anywhere">{store.name}</p>}
-      <div className="border-default space-y-5 border-y py-6" aria-busy={busy}>
+      <div className="border-default space-y-5 rounded-lg border p-6" aria-busy={busy}>
         <h2 className="text-heading-m">注文の受付</h2>
         <p className="text-body-m text-secondary">
           停止中も店舗とメニューは公開されます。新しい注文の受付を再開するには、受付中に切り替えてください。

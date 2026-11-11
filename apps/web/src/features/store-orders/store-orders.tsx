@@ -72,19 +72,12 @@ export function StoreOrders() {
       {loading && <p role="status">注文を読み込んでいます…</p>}
       {orders && (
         <>
-          <div
-            role="status"
-            aria-live="polite"
-            className="rounded-lg border-2 border-brand bg-brand-subtle p-5"
-          >
-            <p className="text-heading-m">
-              受付待ち {orders.filter((order) => order.status === 'pending').length}件
-            </p>
-            <p className="mt-2">新しい注文は受付待ちに表示されます。</p>
-          </div>
-          <div className="grid gap-6 xl:grid-cols-3">
+          <div className="grid items-start gap-5 xl:grid-cols-3">
             {(['pending', 'preparing', 'ready'] as const).map((status) => (
-              <section key={status} className="min-w-0 space-y-4">
+              <section
+                key={status}
+                className={`min-w-0 space-y-3 rounded-lg p-4 ${status === 'pending' ? 'bg-warning-subtle' : 'bg-subtle'}`}
+              >
                 <h2 className="text-heading-m">
                   {{ pending: '受付待ち', preparing: '調理中', ready: '準備完了' }[status]}{' '}
                   <span className="text-secondary">
@@ -97,7 +90,7 @@ export function StoreOrders() {
                     <Link
                       key={order.id}
                       href={`/store/orders/${order.id}`}
-                      className={`block space-y-3 rounded-lg border p-5 focus-visible:outline-2 ${status === 'pending' ? 'border-brand bg-brand-subtle' : 'border-default bg-base'}`}
+                      className={`block space-y-2 rounded-md border p-4 focus-visible:outline-2 ${status === 'pending' ? 'border-warning bg-base' : 'border-default bg-base'}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <StatusLabel status={order.status} />
@@ -152,7 +145,7 @@ export function StoreOrder({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getStoreOrder(id, signal), [id]);
   const { data: order, error, loading, refresh } = useStoreOrders(load);
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <Link href="/store/orders" className="text-brand">
         ← 注文一覧
       </Link>
@@ -167,38 +160,42 @@ export function StoreOrder({ id }: { id: string }) {
           </div>
           <p className="text-body-s break-all">注文番号 {order.id}</p>
           {order.status === 'pending' && <RemainingTime order={order} />}
-          <OrderActions key={order.id} order={order} unavailable={!!error} refresh={refresh} />
-          <section className="space-y-4 rounded-lg border p-6">
-            <h2 className="text-heading-m">注文内容</h2>
-            {order.items.map((item) => (
-              <div key={item.menuItemId} className="flex justify-between gap-4">
-                <span className="min-w-0 break-words">
-                  {item.name} × {item.quantity}
-                </span>
-                <span>{formatYen(item.unitPrice * item.quantity)}</span>
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,320px)]">
+            <section className="border-default space-y-4 rounded-lg border p-6">
+              <h2 className="text-heading-m">注文内容</h2>
+              {order.items.map((item) => (
+                <div key={item.menuItemId} className="flex justify-between gap-4">
+                  <span className="min-w-0 break-words">
+                    {item.name} × {item.quantity}
+                  </span>
+                  <span>{formatYen(item.unitPrice * item.quantity)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between border-t pt-4">
+                <span>商品小計</span>
+                <span>{formatYen(order.subtotal)}</span>
               </div>
-            ))}
-            <div className="flex justify-between border-t pt-4">
-              <span>商品小計</span>
-              <span>{formatYen(order.subtotal)}</span>
+              <div className="flex justify-between">
+                <span>配達料</span>
+                <span>{formatYen(order.deliveryFee)}</span>
+              </div>
+              <div className="text-label-l flex justify-between">
+                <span>合計（税込）</span>
+                <span>{formatYen(order.total)}</span>
+              </div>
+            </section>
+            <div className="space-y-6">
+              <OrderActions key={order.id} order={order} unavailable={!!error} refresh={refresh} />
+              <section className="border-default space-y-3 rounded-lg border p-6">
+                <h2 className="text-heading-m">備考</h2>
+                <p className="whitespace-pre-wrap break-words">
+                  {order.deliveryNote || '備考はありません'}
+                </p>
+                <h2 className="text-heading-m">担当の配達員</h2>
+                <p>未割当</p>
+              </section>
             </div>
-            <div className="flex justify-between">
-              <span>配達料</span>
-              <span>{formatYen(order.deliveryFee)}</span>
-            </div>
-            <div className="text-label-l flex justify-between">
-              <span>合計（税込）</span>
-              <span>{formatYen(order.total)}</span>
-            </div>
-          </section>
-          <section className="space-y-3">
-            <h2 className="text-heading-m">備考</h2>
-            <p className="whitespace-pre-wrap break-words">
-              {order.deliveryNote || '備考はありません'}
-            </p>
-            <h2 className="text-heading-m">担当の配達員</h2>
-            <p>未割当</p>
-          </section>
+          </div>
         </>
       )}
     </div>

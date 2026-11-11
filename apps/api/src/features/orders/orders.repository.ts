@@ -25,6 +25,7 @@ const customerOrderColumns = {
   id: orders.id,
   storeId: orders.storeId,
   storeName: stores.name,
+  storePhotoUrl: stores.photoUrl,
   status: orders.status,
   total: orders.total,
   createdAt: orders.createdAt,
