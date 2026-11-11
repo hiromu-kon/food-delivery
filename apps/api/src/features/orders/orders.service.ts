@@ -1,3 +1,8 @@
+import {
+  customerOrderCancellationResponseSchema,
+  customerOrderDetailSchema,
+  customerOrderSummarySchema,
+} from '@repo/contract';
 import type { Db } from '@repo/db';
 import { DomainError } from '@repo/domain';
 import { PaymentError, type StripeClient } from '../../integrations/stripe/client';
@@ -22,6 +27,57 @@ export function createOrderService(
   repository = createOrderRepository(db),
 ) {
   return {
+    async cancel(userId: string, id: string) {
+      // Commit the reservation before external I/O. Acceptance must lock the same order
+      // and require pending before capture; even a process crash cannot reopen it.
+      await repository.transaction(async (tx) => {
+        await repository.lockCancellation(tx, userId, id);
+        await repository.reserveCancellation(tx, id);
+      });
+      await repository.transaction(async (tx) => {
+        const order = await repository.lockCancellation(tx, userId, id);
+        if (order.paymentVoidedAt) return;
+        try {
+          let intent = await stripe.retrieve(order.paymentIntentId);
+          if (
+            intent.id !== order.paymentIntentId ||
+            intent.capture_method !== 'manual' ||
+            intent.currency !== 'jpy' ||
+            intent.amount !== order.total
+          )
+            throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+          if (intent.status !== 'canceled') {
+            if (intent.status !== 'requires_capture' || intent.amount_capturable !== order.total)
+              throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+            intent = await stripe.cancel(order.paymentIntentId, `${order.id}:customer-cancel`);
+          }
+          if (intent.id !== order.paymentIntentId || intent.status !== 'canceled')
+            throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+          await repository.completeCancellation(tx, id);
+        } catch {
+          // The durable reservation survives rollback; retrieve reconciles lost responses
+          // and expired Stripe idempotency keys on retry. Never capture or refund here.
+          throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+        }
+      });
+      return customerOrderCancellationResponseSchema.parse({ order: { id, status: 'canceled' } })
+        .order;
+    },
+    async list(userId: string) {
+      const rows = await repository.listForCustomer(userId);
+      return rows.map((row) =>
+        customerOrderSummarySchema.parse({ ...row, createdAt: row.createdAt.toISOString() }),
+      );
+    },
+    async get(userId: string, id: string) {
+      const order = await repository.detailForCustomer(userId, id);
+      if (!order) throw new DomainError('NOT_FOUND', '注文が見つかりません');
+      return customerOrderDetailSchema.parse({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        deliveryPhotoUrl: null,
+      });
+    },
     async checkout(userId: string, key: string, raw: CheckoutInput) {
       const input = checkoutSchema.parse(raw);
       input.items.sort((a, b) => a.menuItemId.localeCompare(b.menuItemId));

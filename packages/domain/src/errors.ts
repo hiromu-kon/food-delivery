@@ -1,5 +1,6 @@
 export const domainErrorCodes = [
   'ORDER_NOT_ORDERABLE',
+  'ORDER_NOT_CANCELABLE',
   'IDEMPOTENCY_CONFLICT',
   'NOT_FOUND',
   'UNAUTHORIZED',
