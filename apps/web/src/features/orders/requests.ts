@@ -1,4 +1,5 @@
 import {
+  customerOrderCancellationResponseSchema,
   customerOrderDetailResponseSchema,
   customerOrderListResponseSchema,
   type OrderDetail,
@@ -9,6 +10,7 @@ import { apiClient } from '@/api/client';
 export class OrderReadError extends Error {}
 export class OrderAccessError extends OrderReadError {}
 export class OrderNotFoundError extends OrderReadError {}
+export class OrderConflictError extends OrderReadError {}
 
 function checkResponse(response: Response) {
   if (response.status === 401 || response.status === 403) {
@@ -36,4 +38,22 @@ export async function getOrder(id: string, signal: AbortSignal): Promise<OrderDe
   );
   checkResponse(response);
   return customerOrderDetailResponseSchema.parse(await response.json()).order;
+}
+
+export async function cancelOrder(id: string): Promise<void> {
+  const response: Response = await apiClient.orders[':id'].cancel.$post(
+    { param: { id } },
+    { init: { signal: AbortSignal.timeout(30_000) } },
+  );
+  if ([400, 401, 403, 404].includes(response.status)) checkResponse(response);
+  if (response.status === 409)
+    throw new OrderConflictError(
+      '受付済みなどのため取り消せません。最新の注文状況を確認してください。',
+    );
+  if (!response.ok)
+    throw new OrderReadError(
+      '決済の取消を確認できません。注文がキャンセル表示でも、決済取消を再確認してください。',
+    );
+  const result = customerOrderCancellationResponseSchema.parse(await response.json());
+  if (result.order.id !== id) throw new Error('Unexpected order');
 }
