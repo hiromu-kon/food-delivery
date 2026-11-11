@@ -23,19 +23,16 @@ export function OrderHistory() {
               <li key={order.id}>
                 <Link
                   href={`/orders/${encodeURIComponent(order.id)}`}
-                  className="hover:bg-subtle block space-y-3 py-4 outline-offset-4"
+                  className="hover:bg-subtle flex min-h-22 items-center justify-between gap-3 py-4 outline-offset-4"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <time className="text-body-s text-secondary" dateTime={order.createdAt}>
-                      {orderDate(order.createdAt)}
-                    </time>
-                    <StatusLabel status={order.status} />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-label-l break-words">{order.storeName}</p>
+                    <div className="text-body-s text-secondary flex flex-wrap gap-x-3 gap-y-1">
+                      <time dateTime={order.createdAt}>{orderDate(order.createdAt)}</time>
+                      <span>{formatYen(order.total)}</span>
+                    </div>
                   </div>
-                  <p className="text-label-l break-words">{order.storeName}</p>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <span>{formatYen(order.total)}</span>
-                    <span className="text-brand underline">注文状況を見る</span>
-                  </div>
+                  <StatusLabel status={order.status} />
                 </Link>
               </li>
             ))}

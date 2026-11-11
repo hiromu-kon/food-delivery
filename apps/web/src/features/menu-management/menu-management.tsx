@@ -169,11 +169,7 @@ export function MenuManagement() {
         <p>カテゴリはまだありません。カテゴリを追加してから商品を登録してください。</p>
       )}
       {menu?.categories.map((category) => (
-        <section
-          key={category.id}
-          className="border-default space-y-4 rounded-lg border p-5"
-          aria-label={category.name}
-        >
+        <section key={category.id} className="space-y-3" aria-label={category.name}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex min-w-0 gap-4">
               {category.photoUrl && (
@@ -223,16 +219,21 @@ export function MenuManagement() {
           )}
           <ul className="divide-default divide-y">
             {category.items.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+              <li
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
                 <div className="flex min-w-0 flex-1 gap-4">
                   <FoodPhoto
                     photoUrl={item.photoUrl ?? undefined}
                     alt={item.name}
-                    className={`size-24 shrink-0 ${item.soldout ? 'opacity-50' : ''}`}
+                    className={`size-14 shrink-0 ${item.soldout ? 'opacity-50' : ''}`}
                   />
                   <div className="min-w-0 space-y-1">
-                    <h3 className="text-heading-s wrap-anywhere">{item.name}</h3>
-                    <p className="whitespace-pre-wrap wrap-anywhere">{item.description}</p>
+                    <h3 className="text-label-m wrap-anywhere">{item.name}</h3>
+                    <p className="text-body-s text-secondary whitespace-pre-wrap wrap-anywhere">
+                      {item.description}
+                    </p>
                     <p>¥{item.price.toLocaleString('ja-JP')}（税込）</p>
                     <p className="text-body-s text-secondary">表示順 {item.sortOrder}</p>
                   </div>
