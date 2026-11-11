@@ -69,7 +69,7 @@ Cookie または Bearer のセッション認証が必要。確認済みメー�
 | `GET /orders`     | `CustomerOrderListResponse`（`{ orders: CustomerOrderSummary[] }`） | S-C09。進行中を含む自分の全注文を作成日時の降順、同日時は ID の降順で返す。注文がなければ空配列 |
 | `GET /orders/:id` | `CustomerOrderDetailResponse`（`{ order: CustomerOrderDetail }`）   | S-C08。自分の注文だけを返す                                                                     |
 
-`CustomerOrderSummary`（別名 `OrderSummary`）は `id`, `storeId`, `storeName`, `status`, `total`, `createdAt`（UTC ISO 8601）を持つ。店舗名は現在の店舗名、金額は注文時の値。
+`CustomerOrderSummary`（別名 `OrderSummary`）は `id`, `storeId`, `storeName`, `storePhotoUrl`（URL または `null`）, `status`, `total`, `createdAt`（UTC ISO 8601）を持つ。店舗名・店舗写真は現在の店舗情報、金額は注文時の値。`storePhotoUrl` は注文時点の写真や注文商品の写真を保証しない。写真未登録・読み込み失敗時は Web / native とも56pxの代替表示を使い、他の商品写真から推測しない。
 `CustomerOrderDetail`（別名 `OrderDetail`）はさらに `address`, `building`, `fulfillment`（`hand_delivery` / `leave_at_door`）, `dropoffLocation`（`front_door` / `delivery_box` / `other` / `null`）, `subtotal`, `deliveryFee`, `items`（`menuItemId`, 注文時の `name`, `unitPrice`, `quantity`）, `deliveryPhotoUrl`（URL または `null`）を持つ。金額は円の整数。
 
 状態は上表の6種類をそのまま返す。S-C08 の「取り消す」は `status === 'pending'` の間だけ表示する（取消操作 API は F-08）。置き配写真は配達完了後だけ表示する契約だが、現在は写真の永続化が未実装のため `deliveryPhotoUrl` は常に `null`。状態変更日時も未保存のため返さない。
