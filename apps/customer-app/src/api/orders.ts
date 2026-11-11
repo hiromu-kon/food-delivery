@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { customerOrderListResponseSchema, customerOrderDetailResponseSchema } from '@repo/contract';
+import {
+  customerOrderListResponseSchema,
+  customerOrderDetailResponseSchema,
+  customerOrderCancellationResponseSchema,
+} from '@repo/contract';
 import type { OrdersTransport } from '@/features/orders/orders';
 import { env } from '@/env';
 import { AuthRequestError } from '@/features/auth/request';
@@ -51,6 +55,26 @@ export function createOrderTransport(session: SessionController) {
 
 export function createOrdersTransport(session: SessionController): OrdersTransport {
   return {
+    cancel: (id) =>
+      session.authenticatedRequest(async (token) => {
+        const response = await createApiClient(token).orders[':id'].cancel.$post({ param: { id } });
+        const status: number = response.status;
+        if (!response.ok)
+          throw new AuthRequestError(
+            status === 401
+              ? 'ログインの有効期限が切れました。もう一度ログインしてください。'
+              : status === 403
+                ? 'このアカウントでは注文を取り消せません。'
+                : status === 409
+                  ? '受付済みなどの理由で、この注文は取り消せません。注文状況を確認してください。'
+                  : status === 404 || status === 400
+                    ? '注文が見つかりません。注文履歴から選び直してください。'
+                    : '取消と仮売上の取消の完了を確認できません。同じ注文の取消を再試行してください。',
+            '',
+            status,
+          );
+        return customerOrderCancellationResponseSchema.parse(await response.json()).order;
+      }),
     list: () =>
       session.authenticatedRequest(async (token) => {
         const response = await createApiClient(token).orders.$get();
