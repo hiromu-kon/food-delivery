@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import { assertCustomerCancellation, orderStatuses } from './status';
+import { assertCustomerCancellation, assertStoreOrderAction, orderStatuses } from './status';
 
 const spec = readFileSync(
   new URL('../../../../docs/specs/order-status.md', import.meta.url),
@@ -45,4 +45,20 @@ it('R-07 permits only pending or replay of customer cancellation', () => {
   for (const reason of ['admin', 'store_rejected', 'expired']) {
     expect(() => assertCustomerCancellation('canceled', reason)).toThrow('受付待ち');
   }
+});
+
+it('R-05 R-06 store actions reject every illegal source state and the deadline boundary', () => {
+  const created = new Date('2026-01-01T00:00:00Z');
+  for (const status of orderStatuses)
+    for (const action of ['accept', 'reject', 'ready'] as const) {
+      const run = () => assertStoreOrderAction(status, action, created, created);
+      if (status === (action === 'ready' ? 'preparing' : 'pending')) expect(run).not.toThrow();
+      else expect(run).toThrow();
+    }
+  expect(() =>
+    assertStoreOrderAction('pending', 'accept', created, new Date(created.getTime() + 599999)),
+  ).not.toThrow();
+  expect(() =>
+    assertStoreOrderAction('pending', 'accept', created, new Date(created.getTime() + 600000)),
+  ).toThrow();
 });

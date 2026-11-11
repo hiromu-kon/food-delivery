@@ -4,6 +4,7 @@ const intent = {
   id: 'pi_fake',
   status: 'requires_confirmation',
   amount: 1700,
+  amount_received: 0,
   amount_capturable: 0,
   currency: 'jpy',
   capture_method: 'manual',
@@ -42,6 +43,18 @@ describe('Stripe REST adapter (injected HTTP, no network)', () => {
     expect(fetcher.mock.calls[2]).toMatchObject([
       'https://api.stripe.com/v1/payment_intents/pi_fake/cancel',
       { headers: { 'Idempotency-Key': 'attempt:cancel' } },
+    ]);
+  });
+  it('R-05 captures only through test-mode adapter with a durable idempotency key', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ...intent, status: 'succeeded', amount_received: 1700 })),
+      );
+    await createStripeClient('sk_test_fake', fetcher).capture('pi_fake', 'order:store-capture');
+    expect(fetcher.mock.calls[0]).toMatchObject([
+      'https://api.stripe.com/v1/payment_intents/pi_fake/capture',
+      { method: 'POST', headers: { 'Idempotency-Key': 'order:store-capture' } },
     ]);
   });
   it('rejects live keys and responses and fails closed without configuration', async () => {

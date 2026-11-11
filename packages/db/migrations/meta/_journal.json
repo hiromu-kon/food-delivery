@@ -57,6 +57,13 @@
       "when": 1794359738329,
       "tag": "0007_silly_big_bertha",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794380797988,
+      "tag": "0008_soft_starfox",
+      "breakpoints": true
     }
   ]
 }

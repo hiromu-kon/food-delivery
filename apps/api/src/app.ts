@@ -60,7 +60,15 @@ export function createApp(options: {
     )
     .route('/health', healthRoutes)
     .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
-    .route('/store', createStoreAuthRoutes(options.auth, options.db, options.config))
+    .route(
+      '/store',
+      createStoreAuthRoutes(
+        options.auth,
+        options.db,
+        options.config,
+        options.stripe ?? createStripeClient(),
+      ),
+    )
     .route('/auth', createAuthRoutes(options.auth, options.db, options.config))
     .route(
       '/addresses',

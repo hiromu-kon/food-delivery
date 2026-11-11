@@ -71,6 +71,7 @@ export const orders = pgTable(
     status: orderStatus().notNull().default('pending'),
     paymentIntentId: text().notNull().unique(),
     cancellationReason: text().$type<'customer' | 'store_rejected' | 'expired' | 'admin'>(),
+    captureStartedAt: timestamp({ withTimezone: true }),
     paymentVoidedAt: timestamp({ withTimezone: true }),
     subtotal: integer().notNull(),
     deliveryFee: integer().notNull(),
