@@ -41,7 +41,7 @@ export async function getOrder(id: string, signal: AbortSignal): Promise<OrderDe
 }
 
 export async function cancelOrder(id: string): Promise<void> {
-  const response = await apiClient.orders[':id'].cancel.$post(
+  const response: Response = await apiClient.orders[':id'].cancel.$post(
     { param: { id } },
     { init: { signal: AbortSignal.timeout(30_000) } },
   );
