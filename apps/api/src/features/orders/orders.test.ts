@@ -410,3 +410,177 @@ describe('F-06 checkout, isolated PostgreSQL and injected Stripe', () => {
     );
   });
 });
+
+function cancelOrder(id: string, session = cookie) {
+  return app.request(`/orders/${id}/cancel`, {
+    method: 'POST',
+    headers: { Origin: config.webURL, cookie: session },
+  });
+}
+async function placedOrder() {
+  expect((await post()).status).toBe(201);
+  return (await db.select().from(orders))[0]!;
+}
+describe('F-08 customer cancellation', () => {
+  it('R-07 voids a pending owned order once under concurrent retries', async () => {
+    const order = await placedOrder();
+    const responses = await Promise.all([cancelOrder(order.id), cancelOrder(order.id)]);
+    expect(responses.map((r) => r.status)).toEqual([200, 200]);
+    expect(await responses[0].json()).toEqual({ order: { id: order.id, status: 'canceled' } });
+    expect(stripe.cancel).toHaveBeenCalledExactlyOnceWith(
+      order.paymentIntentId,
+      `${order.id}:customer-cancel`,
+    );
+    expect((await db.select().from(orders))[0]).toMatchObject({
+      status: 'canceled',
+      cancellationReason: 'customer',
+    });
+    expect((await db.select().from(orders))[0]!.paymentVoidedAt).toBeInstanceOf(Date);
+  });
+  it.each(['preparing', 'ready', 'delivering', 'delivered', 'canceled'] as const)(
+    'R-07 rejects %s without contacting Stripe',
+    async (status) => {
+      const order = await placedOrder();
+      await db.update(orders).set({ status }).where(eq(orders.id, order.id));
+      stripe.retrieve.mockClear();
+      expect((await cancelOrder(order.id)).status).toBe(409);
+      expect(stripe.retrieve).not.toHaveBeenCalled();
+      expect(stripe.cancel).not.toHaveBeenCalled();
+    },
+  );
+  it('R-07 validates session, role, verification, ID and ownership', async () => {
+    const order = await placedOrder();
+    expect((await cancelOrder(order.id, '')).status).toBe(401);
+    expect((await cancelOrder('bad')).status).toBe(400);
+    expect((await cancelOrder(randomUUID())).status).toBe(404);
+    const other = randomUUID();
+    await db.insert(users).values({
+      id: other,
+      name: 'Other',
+      email: `${other}@example.test`,
+      phoneNumber: '09011111111',
+    });
+    await db.update(orders).set({ userId: other }).where(eq(orders.id, order.id));
+    expect((await cancelOrder(order.id)).status).toBe(404);
+    await db.update(users).set({ emailVerified: false }).where(eq(users.id, userId));
+    expect((await cancelOrder(order.id)).status).toBe(403);
+    await db.update(users).set({ emailVerified: true, role: 'store' }).where(eq(users.id, userId));
+    expect((await cancelOrder(order.id)).status).toBe(403);
+    expect(stripe.cancel).not.toHaveBeenCalled();
+  });
+  it('R-07 reserves cancellation before Stripe and excludes concurrent acceptance', async () => {
+    const order = await placedOrder();
+    const original = stripe.cancel.getMockImplementation()!;
+    stripe.cancel.mockImplementation(async (...args) => {
+      // A store acceptance must atomically require pending before capturing.
+      const accepted = await db
+        .update(orders)
+        .set({ status: 'preparing' })
+        .where(sql`${orders.id} = ${order.id} and ${orders.status} = 'pending'`)
+        .returning();
+      expect(accepted).toEqual([]);
+      return original(...args);
+    });
+    expect((await cancelOrder(order.id)).status).toBe(200);
+  });
+  it('R-07 acceptance holding the order lock wins before cancellation', async () => {
+    const order = await placedOrder();
+    let request: ReturnType<typeof cancelOrder> | undefined;
+    await db.transaction(async (tx) => {
+      await tx.select().from(orders).where(eq(orders.id, order.id)).for('update');
+      request = cancelOrder(order.id);
+      await tx.update(orders).set({ status: 'preparing' }).where(eq(orders.id, order.id));
+    });
+    expect((await request!).status).toBe(409);
+    expect(stripe.cancel).not.toHaveBeenCalled();
+  });
+  it('R-07 retries a failed void without reopening the order', async () => {
+    const order = await placedOrder();
+    stripe.cancel.mockRejectedValueOnce(new PaymentError('PAYMENT_UNAVAILABLE'));
+    expect((await cancelOrder(order.id)).status).toBe(503);
+    expect((await db.select().from(orders))[0]).toMatchObject({
+      status: 'canceled',
+      paymentVoidedAt: null,
+    });
+    expect((await cancelOrder(order.id)).status).toBe(200);
+    expect(stripe.cancel).toHaveBeenCalledTimes(2);
+  });
+  it('R-07 reconciles a lost Stripe response without canceling twice', async () => {
+    const order = await placedOrder();
+    const original = stripe.cancel.getMockImplementation()!;
+    stripe.cancel.mockImplementationOnce(async (...args) => {
+      await original(...args);
+      throw new PaymentError('PAYMENT_UNAVAILABLE');
+    });
+    expect((await cancelOrder(order.id)).status).toBe(503);
+    expect((await cancelOrder(order.id)).status).toBe(200);
+    expect(stripe.cancel).toHaveBeenCalledOnce();
+  });
+  it('R-07 reconciles Stripe success followed by DB failure', async () => {
+    const order = await placedOrder();
+    const repository = createOrderRepository(db);
+    vi.spyOn(repository, 'completeCancellation').mockRejectedValueOnce(new Error('DB offline'));
+    const service = createOrderService(db, stripe, repository);
+    await expect(service.cancel(userId, order.id)).rejects.toMatchObject({
+      code: 'PAYMENT_RECONCILIATION_REQUIRED',
+    });
+    expect((await service.cancel(userId, order.id)).status).toBe('canceled');
+    expect(stripe.cancel).toHaveBeenCalledOnce();
+  });
+  it.each(['succeeded', 'processing', 'requires_payment_method'])(
+    'R-07 never voids unexpected payment state %s',
+    async (status) => {
+      const order = await placedOrder();
+      intents.get(order.paymentIntentId)!.status = status;
+      expect((await cancelOrder(order.id)).status).toBe(503);
+      expect(stripe.cancel).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { id: 'pi_wrong' },
+    { amount: 1 },
+    { currency: 'usd' },
+    { capture_method: 'automatic' },
+    { amount_capturable: 1 },
+  ])('R-07 rejects inconsistent authorization %j', async (patch) => {
+    const order = await placedOrder();
+    stripe.retrieve.mockResolvedValueOnce({ ...intents.get(order.paymentIntentId)!, ...patch });
+    expect((await cancelOrder(order.id)).status).toBe(503);
+    expect(stripe.cancel).not.toHaveBeenCalled();
+  });
+  it('R-07 reservation failure never contacts Stripe', async () => {
+    const order = await placedOrder();
+    const repository = createOrderRepository(db);
+    vi.spyOn(repository, 'reserveCancellation').mockRejectedValueOnce(new Error('DB offline'));
+    stripe.retrieve.mockClear();
+    await expect(
+      createOrderService(db, stripe, repository).cancel(userId, order.id),
+    ).rejects.toThrow('DB offline');
+    expect(stripe.retrieve).not.toHaveBeenCalled();
+    expect((await db.select().from(orders))[0]!.status).toBe('pending');
+  });
+  it('R-07 lost completion commit response is safely replayed', async () => {
+    const order = await placedOrder();
+    const repository = createOrderRepository(db);
+    const transaction = repository.transaction;
+    vi.spyOn(repository, 'transaction')
+      .mockImplementationOnce(transaction)
+      .mockImplementationOnce(async (action) => {
+        await transaction(action);
+        throw new Error('COMMIT response lost');
+      });
+    const service = createOrderService(db, stripe, repository);
+    await expect(service.cancel(userId, order.id)).rejects.toThrow('COMMIT response lost');
+    expect((await service.cancel(userId, order.id)).status).toBe('canceled');
+    expect(stripe.cancel).toHaveBeenCalledOnce();
+  });
+  it('R-07 does not report success for an unconfirmed Stripe cancellation', async () => {
+    const order = await placedOrder();
+    stripe.cancel.mockResolvedValueOnce({
+      ...intents.get(order.paymentIntentId)!,
+      status: 'requires_capture',
+    });
+    expect((await cancelOrder(order.id)).status).toBe(503);
+    expect((await db.select().from(orders))[0]!.paymentVoidedAt).toBeNull();
+  });
+});

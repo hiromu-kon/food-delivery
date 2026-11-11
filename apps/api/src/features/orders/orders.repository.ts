@@ -10,6 +10,7 @@ import {
   type CheckoutQuote,
 } from '@repo/db';
 import {
+  assertCustomerCancellation,
   calculateCartTotals,
   checkCartOrderability,
   distanceMeters,
@@ -39,6 +40,25 @@ const reject = () => {
 
 export function createOrderRepository(db: Db) {
   return {
+    async lockCancellation(tx: Tx, userId: string, id: string) {
+      const [order] = await tx
+        .select()
+        .from(orders)
+        .where(and(eq(orders.id, id), eq(orders.userId, userId)))
+        .for('update');
+      if (!order) throw new DomainError('NOT_FOUND', '注文が見つかりません');
+      assertCustomerCancellation(order.status, order.cancellationReason);
+      return order;
+    },
+    async reserveCancellation(tx: Tx, id: string) {
+      await tx
+        .update(orders)
+        .set({ status: 'canceled', cancellationReason: 'customer' })
+        .where(eq(orders.id, id));
+    },
+    async completeCancellation(tx: Tx, id: string) {
+      await tx.update(orders).set({ paymentVoidedAt: new Date() }).where(eq(orders.id, id));
+    },
     async listForCustomer(userId: string) {
       return db
         .select(customerOrderColumns)
