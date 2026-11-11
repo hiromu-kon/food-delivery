@@ -72,31 +72,32 @@ export function OrderHistoryScreen() {
           action={<Button onPress={() => router.replace('/')}>お店を探す</Button>}
         />
       )}
-      {orders?.map((order) => (
-        <Pressable
-          key={order.id}
-          accessibilityRole="button"
-          accessibilityLabel={`${order.storeName}、${dateLabel(order.createdAt)}の注文の詳細を開く`}
-          onPress={() =>
-            router.push({ pathname: '/orders/[orderId]', params: { orderId: order.id } })
-          }
-          className="border-default bg-base gap-3 rounded-md border p-4"
-        >
-          <View className="flex-row flex-wrap items-center justify-between gap-2">
-            <Text variant="heading-m" className="shrink">
-              {order.storeName}
-            </Text>
-            <StatusLabel status={order.status} />
-          </View>
-          <Text variant="body-s" className="text-secondary">
-            {dateLabel(order.createdAt)}
-          </Text>
-          <View className="flex-row flex-wrap justify-between gap-2">
-            <Text variant="label-l">{formatYen(order.total)}</Text>
-            <Text className="text-brand">注文の詳細を見る</Text>
-          </View>
-        </Pressable>
-      ))}
+      <View>
+        {orders?.map((order) => (
+          <Pressable
+            key={order.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${order.storeName}、${dateLabel(order.createdAt)}の注文の詳細を開く`}
+            onPress={() =>
+              router.push({ pathname: '/orders/[orderId]', params: { orderId: order.id } })
+            }
+            className="border-default bg-base min-h-22 flex-row items-center justify-between gap-3 border-b py-4"
+          >
+            <View className="min-w-0 flex-1 gap-1">
+              <Text variant="label-l">{order.storeName}</Text>
+              <View className="flex-row flex-wrap gap-x-3 gap-y-1">
+                <Text variant="body-s" className="text-secondary">
+                  {dateLabel(order.createdAt)}
+                </Text>
+                <Text variant="body-s" className="text-secondary">
+                  {formatYen(order.total)}
+                </Text>
+              </View>
+            </View>
+            <StatusLabel status={order.status} className="self-center" />
+          </Pressable>
+        ))}
+      </View>
       {orders && orders.length > 0 && <Retry reload={controller.reload} />}
     </ScreenShell>
   );
