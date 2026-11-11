@@ -126,6 +126,7 @@ export function CartScreen() {
               ))}
             </View>
           )}
+          <NoticeBanner>お店が受け付けるまで、代金は請求されません。</NoticeBanner>
           {orderability.status === 'below-minimum' ? (
             <NoticeBanner>
               <Text>

@@ -95,6 +95,7 @@ export function CartView() {
               </div>
             </dl>
           )}
+          <NoticeBanner tone="info">お店が受け付けるまで、代金は請求されません。</NoticeBanner>
           {orderability.status === 'below-minimum' && (
             <NoticeBanner tone="warning" role="status">
               最低注文金額 {formatYen(cart.store.minimumOrderAmount)} まで、あと{' '}

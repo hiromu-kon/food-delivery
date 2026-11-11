@@ -217,28 +217,36 @@ export function MenuManagement() {
           {category.items.length === 0 && (
             <p className="text-secondary">このカテゴリにはまだ商品がありません。</p>
           )}
-          <ul className="divide-default divide-y">
-            {category.items.map((item) => (
-              <li
-                key={item.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-              >
-                <div className="flex min-w-0 flex-1 gap-4">
+          <div className="border-default overflow-hidden rounded-lg border">
+            <div
+              aria-hidden
+              className="bg-subtle text-label-s hidden grid-cols-[56px_minmax(0,1fr)_100px_120px_240px] items-center gap-4 px-4 py-3 xl:grid"
+            >
+              <span>写真</span>
+              <span>商品名</span>
+              <span>価格</span>
+              <span>売り切れ</span>
+              <span>操作</span>
+            </div>
+            <ul className="divide-default divide-y">
+              {category.items.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-center gap-4 px-4 py-3 xl:grid xl:grid-cols-[56px_minmax(0,1fr)_100px_120px_240px]"
+                >
                   <FoodPhoto
                     photoUrl={item.photoUrl ?? undefined}
                     alt={item.name}
                     className={`size-14 shrink-0 ${item.soldout ? 'opacity-50' : ''}`}
                   />
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 flex-1 space-y-1">
                     <h3 className="text-label-m wrap-anywhere">{item.name}</h3>
                     <p className="text-body-s text-secondary whitespace-pre-wrap wrap-anywhere">
                       {item.description}
                     </p>
-                    <p>¥{item.price.toLocaleString('ja-JP')}（税込）</p>
                     <p className="text-body-s text-secondary">表示順 {item.sortOrder}</p>
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-body-s">¥{item.price.toLocaleString('ja-JP')}（税込）</p>
                   <label className="flex items-center gap-2">
                     <Switch
                       aria-label={`${item.name}の売り切れ`}
@@ -253,31 +261,33 @@ export function MenuManagement() {
                     />
                     {item.soldout ? '売り切れ' : '販売中'}
                   </label>
-                  <Button
-                    size="M"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() =>
-                      openEditor({ kind: 'item', value: item, categoryId: category.id })
-                    }
-                  >
-                    商品を編集
-                  </Button>
-                  <Button
-                    size="M"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => {
-                      setError('');
-                      setRemoval({ kind: 'item', id: item.id, name: item.name });
-                    }}
-                  >
-                    商品を削除
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      size="M"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        openEditor({ kind: 'item', value: item, categoryId: category.id })
+                      }
+                    >
+                      商品を編集
+                    </Button>
+                    <Button
+                      size="M"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setError('');
+                        setRemoval({ kind: 'item', id: item.id, name: item.name });
+                      }}
+                    >
+                      商品を削除
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ))}
       <AlertDialog
