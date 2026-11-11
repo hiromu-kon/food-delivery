@@ -44,6 +44,7 @@ const stripe = {
   create: vi.fn<StripeClient['create']>(),
   retrieve: vi.fn<StripeClient['retrieve']>(),
   confirm: vi.fn<StripeClient['confirm']>(),
+  capture: vi.fn<StripeClient['capture']>(),
   cancel: vi.fn<StripeClient['cancel']>(),
 };
 const app = createApp({ auth, db, config, stripe, getClientIp: () => undefined });

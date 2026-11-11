@@ -59,3 +59,19 @@ export const customerOrderCancellationResponseSchema = z.object({
 export type CustomerOrderCancellationResponse = z.infer<
   typeof customerOrderCancellationResponseSchema
 >;
+
+export const storeOrderSummarySchema = customerOrderSummarySchema.omit({ storeName: true }).extend({
+  acceptanceDeadline: z.iso.datetime(),
+  paymentReconciling: z.boolean(),
+});
+export const storeOrderDetailSchema = storeOrderSummarySchema.extend({
+  items: z.array(customerOrderItemSchema),
+  subtotal: z.number().int().nonnegative(),
+  deliveryFee: z.number().int().nonnegative(),
+  deliveryNote: z.string(),
+  courier: z.null(),
+});
+export const storeOrderListResponseSchema = z.object({ orders: z.array(storeOrderSummarySchema) });
+export const storeOrderDetailResponseSchema = z.object({ order: storeOrderDetailSchema });
+export type StoreOrderSummary = z.infer<typeof storeOrderSummarySchema>;
+export type StoreOrderDetail = z.infer<typeof storeOrderDetailSchema>;

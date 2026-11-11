@@ -7,13 +7,21 @@ import { requireStoreContext, type StoreEnv } from '../../middleware/store-conte
 import type { AuthConfig, AuthService } from '../auth/auth.service';
 import { createMenuManagementRoutes } from '../menu-management/menu-management.routes';
 import { createStoreAcceptanceRoutes } from '../store-acceptance/store-acceptance.routes';
+import type { StripeClient } from '../../integrations/stripe/client';
+import { createStoreOrderRoutes } from '../store-orders/store-orders.routes';
 import { storeMeQuerySchema } from './store-auth.schema';
 
-export function createStoreAuthRoutes(auth: AuthService, db: Db, config: AuthConfig) {
+export function createStoreAuthRoutes(
+  auth: AuthService,
+  db: Db,
+  config: AuthConfig,
+  stripe: StripeClient,
+) {
   return new Hono<StoreEnv>()
     .use(requireSession(auth, db, [config.webURL, new URL(config.baseURL).origin]))
     .use(requireStoreContext(db))
     .route('/', createStoreAcceptanceRoutes(db))
+    .route('/orders', createStoreOrderRoutes(db, stripe))
     .route('/menu', createMenuManagementRoutes(db))
     .get(
       '/me',

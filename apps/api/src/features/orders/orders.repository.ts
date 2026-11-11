@@ -47,6 +47,7 @@ export function createOrderRepository(db: Db) {
         .where(and(eq(orders.id, id), eq(orders.userId, userId)))
         .for('update');
       if (!order) throw new DomainError('NOT_FOUND', '注文が見つかりません');
+      if (order.captureStartedAt) throw new DomainError('ORDER_NOT_CANCELABLE', '決済確認中です');
       assertCustomerCancellation(order.status, order.cancellationReason);
       return order;
     },

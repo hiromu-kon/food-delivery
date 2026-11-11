@@ -5,13 +5,14 @@ const intentSchema = z.object({
   id: z.string().regex(/^pi_[a-zA-Z0-9_]+$/),
   status: z.string(),
   amount: z.number().int(),
+  amount_received: z.number().int(),
   amount_capturable: z.number().int(),
   currency: z.string(),
   capture_method: z.string(),
   livemode: z.literal(false),
 });
 
-/** This initial integration deliberately accepts only test-mode keys. No capture endpoint. */
+/** Only test-mode keys and responses are accepted. */
 export function createStripeClient(secret?: string, fetcher: typeof fetch = fetch): StripeClient {
   if (secret && !/^sk_test_[a-zA-Z0-9]+$/.test(secret)) throw new Error('Stripe test key required');
   async function request(path: string, values?: Record<string, string>, key?: string) {
@@ -56,6 +57,7 @@ export function createStripeClient(secret?: string, fetcher: typeof fetch = fetc
       ),
     retrieve: (id) => request(`/${encodeURIComponent(id)}`),
     confirm: (id, key) => request(`/${encodeURIComponent(id)}/confirm`, {}, key),
+    capture: (id, key) => request(`/${encodeURIComponent(id)}/capture`, {}, key),
     cancel: (id, key) => request(`/${encodeURIComponent(id)}/cancel`, {}, key),
   };
 }

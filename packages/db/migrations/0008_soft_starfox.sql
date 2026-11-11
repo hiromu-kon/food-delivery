@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "capture_started_at" timestamp with time zone;
