@@ -73,7 +73,7 @@ export function LoginForm({ verified }: { verified: boolean }) {
         </div>
       )}
       <div className="mt-8 space-y-3 border-t pt-6">
-        <p className="text-body-s text-secondary text-center">はじめての方</p>
+        <p className="text-body-m text-secondary">はじめての方</p>
         <Button asChild variant="secondary" className="w-full">
           <Link href="/sign-up">会員登録する</Link>
         </Button>
