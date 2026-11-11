@@ -75,3 +75,13 @@ Cookie または Bearer のセッション認証が必要。確認済みメー�
 状態は上表の6種類をそのまま返す。S-C08 の「取り消す」は `status === 'pending'` の間だけ表示する（取消操作 API は F-08）。置き配写真は配達完了後だけ表示する契約だが、現在は写真の永続化が未実装のため `deliveryPhotoUrl` は常に `null`。状態変更日時も未保存のため返さない。
 
 不正な注文 ID は `400 VALIDATION_ERROR`、存在しない注文と他人の注文は同じ `404 NOT_FOUND`。未認証は `401 UNAUTHORIZED`、注文者以外・メール未確認・利用停止は既存の認証ルールに従う。注文・明細とも認証ユーザー ID で絞り込み、決済 ID・Stripe 情報・ユーザー ID・座標・内部処理用の値は返さない。
+
+## 注文者による取消 API（F-08 / R-07）
+
+`POST /orders/:id/cancel` は参照 API と同じ認証・認可・ID 検証を使う。本文・冪等キーは不要。同じ注文 ID への再送で再試行できる。成功は `200 CustomerOrderCancellationResponse`（`{ order: { id, status: 'canceled' } }`）。受付後・配達完了・注文者以外の理由で取り消された注文は `409 ORDER_NOT_CANCELABLE`。
+
+注文行を `FOR UPDATE` でロックし、所有者と状態を照合して、`canceled` と理由 `customer` を先にコミットする。その後、再び同じ行をロックして Stripe の manual 仮売上を取り消し、確認済み日時 `paymentVoidedAt` を保存する。店舗受付を実装するときも、同じ注文行をロックし、`pending` を確認してから売上確定する必要がある。
+
+Stripe 取消が未確認の間も注文は `canceled` のまま受付できない。取消失敗・通信断・不明な決済状態では `503 PAYMENT_RECONCILIATION_REQUIRED` を返し、成功とは扱わない。注文者は同じ API を再送して復旧できる。再送では PaymentIntent を取得し、既に取消済みなら重ねて取り消さず確認済み日時を保存する。Stripe 成功後に DB が失敗した場合も同じ手順で復旧する。確認済みなら Stripe を呼ばず成功を返す。自動再試行ジョブは本 API の対象外。
+
+取消前に PaymentIntent ID、通貨、金額、manual capture、未確定の全額仮売上を照合する。売上確定済み等の想定外の状態は自動で返金せず、上記 503 として調査・再照合を必要とする。

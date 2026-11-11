@@ -50,6 +50,13 @@
       "when": 1793786861262,
       "tag": "0006_opposite_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794359738329,
+      "tag": "0007_silly_big_bertha",
+      "breakpoints": true
     }
   ]
 }

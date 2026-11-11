@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import { orderStatuses } from './status';
+import { assertCustomerCancellation, orderStatuses } from './status';
 
 const spec = readFileSync(
   new URL('../../../../docs/specs/order-status.md', import.meta.url),
@@ -34,4 +34,15 @@ it('rejects all transitions absent from the order specification', async () => {
   for (const from of orderStatuses)
     for (const to of orderStatuses)
       expect(canTransitionOrder(from, to)).toBe(allowed.has(`${from}:${to}`));
+});
+
+it('R-07 permits only pending or replay of customer cancellation', () => {
+  expect(() => assertCustomerCancellation('pending', null)).not.toThrow();
+  expect(() => assertCustomerCancellation('canceled', 'customer')).not.toThrow();
+  for (const status of orderStatuses.filter((status) => status !== 'pending')) {
+    expect(() => assertCustomerCancellation(status, null)).toThrow('受付待ち');
+  }
+  for (const reason of ['admin', 'store_rejected', 'expired']) {
+    expect(() => assertCustomerCancellation('canceled', reason)).toThrow('受付待ち');
+  }
 });

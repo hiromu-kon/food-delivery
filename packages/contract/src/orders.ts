@@ -53,3 +53,10 @@ export type CustomerOrderDetailResponse = z.infer<typeof customerOrderDetailResp
 
 export type OrderSummary = CustomerOrderSummary;
 export type OrderDetail = CustomerOrderDetail;
+
+export const customerOrderCancellationResponseSchema = z.object({
+  order: z.object({ id: z.uuid(), status: z.literal('canceled') }),
+});
+export type CustomerOrderCancellationResponse = z.infer<
+  typeof customerOrderCancellationResponseSchema
+>;
