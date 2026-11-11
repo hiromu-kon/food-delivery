@@ -22,7 +22,7 @@ API は認可の正本であり、表示済み状態を権限キャッシュと�
 
 ## 店舗枠とデザイン
 
-SideNav は本人の実店舗名、TopBar は本人のメールアドレスを表示する。注文・メニュー・店舗設定のナビ先は認可された見出しだけの placeholder とし、404 にしない。業務のダミーデータ・受付状態・受付切替・F-10/F-11/F-12 の API は追加しない。
+SideNav は本人の実店舗名、TopBar は本人のメールアドレスを表示する。注文・メニュー・店舗設定は認証済みの店舗枠から利用する。メニュー管理（F-11 / S-S04・S-S05）は [menu-management-web.md](menu-management-web.md)、受付切替（F-12）は [store-acceptance.md](store-acceptance.md) を参照する。
 
 Penpot page21 の S-S01（`2531c15c-f912-8097-8008-d954248de300`）および停止 variant の実 content / appliedTokens を参照する。カード最大幅440px・desktop余白40px・brand30px・gap20px、入力とボタン48pxを使い、本文の行高はコードのトークンを維持する。狭幅では余白を縮め、縦スクロールとキーボード操作を許す。S-S02 の既存 SideNav / TopBar を再利用する。
 

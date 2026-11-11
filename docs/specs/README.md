@@ -34,3 +34,5 @@ ID は一度付けたら変えない。廃止するときは欠番にする。
 仕様の変更は PR で行い、関係する Issue と、テストを ID で探して一緒に直す。
 
 注文者nativeアプリのカート・ローカル保存・S-C05/S-C06の動作は [cart-app.md](cart-app.md) を参照する。
+
+店舗Webのカテゴリ・商品管理（F-11 / S-S04・S-S05）は [menu-management-web.md](menu-management-web.md) を参照する。
