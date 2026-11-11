@@ -1,5 +1,7 @@
 # 仕様：メニュー管理（F-11 / Issue52）
 
+店舗Web（Issue53 / S-S04・S-S05）の操作は [menu-management-web.md](menu-management-web.md) を参照する。
+
 店舗スタッフが所属店舗のカテゴリ・商品を管理する。注文者の `GET /stores/:storeId/menu` の URL・応答・認可は変更しない。
 
 ## API
