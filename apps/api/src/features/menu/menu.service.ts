@@ -10,7 +10,6 @@ export function createMenuService(db: Db) {
     async get(storeId: string) {
       const store = await repository.findStore(storeId);
       if (!store) throw new DomainError('NOT_FOUND', '店舗が見つかりません');
-      // カテゴリ数・商品数によらず3クエリ。各商品は一度だけ分類する。
       const [categories, items] = await Promise.all([
         repository.categories(storeId),
         repository.items(storeId),

@@ -27,7 +27,6 @@ export function distanceMeters(from: Coordinates, to: Coordinates): number {
   return 2 * earthRadiusMeters * Math.asin(Math.sqrt(Math.max(0, Math.min(1, a))));
 }
 
-/** 丸める前のメートル値で境界を含めて比較する。 */
 export function isWithinDeliveryRadius(distance: number, radiusMeters: number): boolean {
   if (
     !Number.isFinite(distance) ||

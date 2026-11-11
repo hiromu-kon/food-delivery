@@ -1,4 +1,4 @@
-import type { DeliveryAddress } from '@repo/contract';
+import type { CheckoutInput, DeliveryAddress } from '@repo/contract';
 import { checkCartOrderability } from '@repo/domain';
 import type { CartState } from '@/features/cart/cart';
 import { z } from 'zod';
@@ -12,15 +12,7 @@ export type CheckoutForm = {
   dropoffLocation: DropoffLocation | '';
   deliveryNote: string;
 };
-export type OrderRequest = {
-  storeId: string;
-  addressId: string;
-  items: { menuItemId: string; quantity: number }[];
-  fulfillment: Fulfillment;
-  dropoffLocation?: DropoffLocation | undefined;
-  deliveryNote?: string | undefined;
-  paymentMethodId: string;
-};
+export type OrderRequest = CheckoutInput;
 export type OrderReceipt = { id: string };
 export const attemptSchema = z.object({
   key: z.uuid(),

@@ -2,7 +2,6 @@ import { BikeIcon, ReceiptTextIcon, StoreIcon } from 'lucide-react';
 
 import { SideNav } from '@/components/ui/side-nav';
 
-// 運営の画面はデザインを作らず、店舗と同じ部品で組む。
 export default function AdminSignedInLayout({ children }: LayoutProps<'/admin'>) {
   return (
     <div className="flex flex-1">

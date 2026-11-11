@@ -1,6 +1,6 @@
 # F-06 注文作成・仮売上API
 
-基点は `origin/issue56-store-acceptance-api`（PR #134、`aa7b71f`）。対象はAPI、domain、DBのみ。
+注文作成と仮売上の契約・再送・障害復旧の仕様。注文参照・受付前の取消は [order-status.md](order-status.md) を参照する。
 
 ## 契約
 
@@ -66,9 +66,9 @@ Stripe操作とDB commitは分散トランザクションではない。プロ�
 
 `STRIPE_SECRET_KEY` は任意。未設定なら注文作成は503となる。この初期実装は `sk_test_` のみを許可し、live key / livemode応答を拒否する。API versionは `2026-10-28.endive` に固定し、各HTTP操作に10秒のtimeoutを付ける。
 
-追加認証（3DS等）のフローは未実装で、requires_actionは取消して402とする。本番利用には追加認証と本番用設定の設計、監視・自動照合が必要。今回、実Stripeの通信・カード・仮売上・課金は一切使用していない。
+追加認証（3DS等）のフローは未実装で、requires_actionは取消して402とする。本番利用には追加認証と本番用設定の設計、監視・自動照合が必要。結合テストでは StripeClient を注入し、実 Stripe との通信は行わない。
 
-注文履歴、店舗受付・capture、ユーザーキャンセル、期限切れ処理、配達員操作、UIはこの実装の対象外。配達メモはこのcustomer専用作成API以外で公開しない。後続の配達員APIでは担当配達員の認可が必要。
+配達メモの公開は操作主体と用途に応じて API で制限する。配達員向け API では担当の認可が必要。
 
 ## 検証
 
@@ -83,5 +83,3 @@ git diff --check
 注文の結合テストは偽Stripeを注入し、正本金額・価格改ざん拒否・住所所有権・配達範囲・店舗停止・売切れ・別店舗/不明商品・数量・最低額境界・スナップショット・受け取り方法・認証・同時再送を検証する。障害系ではDB rollback、commit応答不明、create応答不明、intent保存失敗、confirm応答不明、取消失敗と再送、古いキーの再作成拒否を検証する。HTTPアダプタは注入したfetchだけを使用し、manual/未confirm作成・操作別キー・live拒否・失敗マッピングを確認する。domainは全状態の遷移組み合わせを検査する。
 
 参照: [PaymentIntent作成](https://docs.stripe.com/api/payment_intents/create)、[confirm](https://docs.stripe.com/api/payment_intents/confirm)、[cancel](https://docs.stripe.com/api/payment_intents/cancel)、[idempotency](https://docs.stripe.com/api/idempotent_requests)。
-
-最終確認（2026-11-04）: 空の専用DBからmigrationを適用して `pnpm check` が全20タスク成功。APIは122件（注文27件・Stripe HTTP 6件を含む）、domainは76件が成功し、`pnpm format:check` と `git diff --check` も成功。

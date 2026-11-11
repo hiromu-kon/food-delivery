@@ -1,3 +1,9 @@
+# apps/web
+
+- 注文者 `src/app/(customer)/`・店舗 `src/app/store/`・運営 `src/app/admin/` を 1 アプリで提供する。
+- 店舗・運営向けの画面ガードは layout に置き、保護データを取得するページ・処理でも認可を確認する。layout の再利用だけに依存しない。
+- Server Component から API を呼ぶときは `src/api/server.ts` の `createServerApiClient()` を使う（cookie を転送するため）。
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

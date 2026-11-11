@@ -6,7 +6,6 @@ import type { StoreEnv } from '../../middleware/store-context';
 import { storeAcceptanceInputSchema } from './store-acceptance.schema';
 import { createStoreAcceptanceService } from './store-acceptance.service';
 
-// 親の /store ルートで requireSession / requireStoreContext を適用する。
 export function createStoreAcceptanceRoutes(db: Db) {
   const service = createStoreAcceptanceService(db);
   return new Hono<StoreEnv>()

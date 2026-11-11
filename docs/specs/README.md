@@ -4,6 +4,7 @@
 
 | ファイル                               | 内容                                   |
 | -------------------------------------- | -------------------------------------- |
+| [order-checkout.md](order-checkout.md) | 注文作成・仮売上と障害復旧             |
 | [order-status.md](order-status.md)     | 注文の状態と遷移                       |
 | [business-rules.md](business-rules.md) | 金額・期限・配達エリアなどの業務ルール |
 | [screens.md](screens.md)               | 画面一覧と遷移                         |

@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 export const storeSearchQuerySchema = z.strictObject({ addressId: z.uuid() });
 
-// 保存モデルから公開項目を選び、計算項目だけを追加する。
 export const storeSchema = z.object({
   id: z.uuid(),
   name: z.string(),
