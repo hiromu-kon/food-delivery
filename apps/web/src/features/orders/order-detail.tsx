@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { formatYen } from '@repo/domain';
 import { OrderSteps } from '@/components/ui/order-steps';
 import { StatusLabel } from '@/components/ui/status-label';
+import { OrderCancellation } from './order-cancellation';
 import { getOrder } from './requests';
 import { useOrdersResource } from './use-orders-resource';
 import { ResourceFeedback, orderDate } from './resource-feedback';
@@ -27,6 +28,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               この画面を開いている間、15秒ごとに更新します。
             </p>
           </section>
+          <OrderCancellation key={order.id} order={order} refresh={retry} unavailable={!!error} />
           <section className="space-y-3 border-t pt-5" aria-labelledby="order-items-heading">
             <h2 id="order-items-heading" className="text-heading-m">
               注文内容
