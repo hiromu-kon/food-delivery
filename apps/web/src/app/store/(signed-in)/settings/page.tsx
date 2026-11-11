@@ -1,6 +1,5 @@
-import { requireStoreContext } from '@/features/store-auth/session';
+import { AcceptanceSettings } from '@/features/store-acceptance/acceptance-settings';
 
-export default async function StorePlaceholderPage() {
-  await requireStoreContext();
-  return <h1 className="text-heading-l">店舗の設定</h1>;
+export default function StoreSettingsPage() {
+  return <AcceptanceSettings />;
 }
