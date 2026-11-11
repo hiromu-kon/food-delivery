@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { customerOrderListResponseSchema, customerOrderDetailResponseSchema } from '@repo/contract';
+import type { OrdersTransport } from '@/features/orders/orders';
 import { env } from '@/env';
 import { AuthRequestError } from '@/features/auth/request';
 import type { SessionController } from '@/features/auth/session';
 import type { OrderRequest } from '@/features/checkout/checkout';
-import { requestTimeoutMs } from './client';
+import { createApiClient, requestTimeoutMs } from './client';
 
 // F-06 is intentionally local until the stacked API contract is available on this branch.
 export function createOrderTransport(session: SessionController) {
@@ -45,4 +47,33 @@ export function createOrderTransport(session: SessionController) {
         clearTimeout(timeout);
       }
     });
+}
+
+export function createOrdersTransport(session: SessionController): OrdersTransport {
+  return {
+    list: () =>
+      session.authenticatedRequest(async (token) => {
+        const response = await createApiClient(token).orders.$get();
+        if (!response.ok)
+          throw new AuthRequestError(
+            '注文履歴を取得できませんでした。再試行してください。',
+            '',
+            response.status,
+          );
+        return customerOrderListResponseSchema.parse(await response.json()).orders;
+      }),
+    detail: (id) =>
+      session.authenticatedRequest(async (token) => {
+        const response = await createApiClient(token).orders[':id'].$get({ param: { id } });
+        if (!response.ok)
+          throw new AuthRequestError(
+            [400, 404].includes(response.status)
+              ? '注文が見つかりません。注文履歴から選び直してください。'
+              : '注文状況を取得できませんでした。再試行してください。',
+            '',
+            response.status,
+          );
+        return customerOrderDetailResponseSchema.parse(await response.json()).order;
+      }),
+  };
 }
