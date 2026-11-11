@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatYen } from '@repo/domain';
 import { AppHeader } from '@repo/native-ui/app-header';
 import { Button } from '@repo/native-ui/button';
@@ -7,7 +8,7 @@ import { Text } from '@repo/native-ui/text';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Receipt } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { ActivityIndicator, AppState, Image, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Image, Pressable, View } from 'react-native';
 import { createOrdersTransport } from '@/api/orders';
 import { OrderSteps } from '@/components/order/order-steps';
 import { FormError, ScreenShell } from '@/features/auth/auth-screen';
@@ -18,7 +19,7 @@ const dateLabel = (value: string) => new Date(value).toLocaleString('ja-JP');
 function useOrders(route?: string, enabled = true) {
   const { controller: session, state: auth } = useSession();
   const controller = useMemo(
-    () => new OrdersController(createOrdersTransport(session), session),
+    () => new OrdersController(createOrdersTransport(session), session, AsyncStorage),
     [session],
   );
   const state = useSyncExternalStore(
@@ -131,6 +132,44 @@ export function OrderDetailScreen() {
           <Text variant="heading-m">{order.storeName}</Text>
           <StatusLabel status={order.status} />
           <OrderSteps status={order.status} />
+          {state.cancellationMessage && (
+            <Text accessibilityRole="alert">{state.cancellationMessage}</Text>
+          )}
+          {(order.status === 'pending' ||
+            state.cancellation === 'uncertain' ||
+            state.cancellation === 'submitting') &&
+            state.cancellation !== 'blocked' && (
+              <Button
+                variant="secondary"
+                disabled={state.cancellation === 'submitting'}
+                onPress={() => {
+                  Alert.alert(
+                    state.cancellation === 'uncertain'
+                      ? '取消結果を再確認しますか？'
+                      : '注文を取り消しますか？',
+                    state.cancellation === 'uncertain'
+                      ? '同じ注文の取消を再試行し、仮売上の取消結果を確認します。'
+                      : '店舗が受け付ける前の注文だけ取り消せます。',
+                    [
+                      { text: '戻る', style: 'cancel' },
+                      {
+                        text: '取り消す',
+                        style: 'destructive',
+                        onPress: () => {
+                          void controller.cancel(order.id);
+                        },
+                      },
+                    ],
+                  );
+                }}
+              >
+                {state.cancellation === 'submitting'
+                  ? '取消を確認中…'
+                  : state.cancellation === 'uncertain'
+                    ? '取消を再試行する'
+                    : '取り消す'}
+              </Button>
+            )}
           <Text variant="body-s" className="text-secondary">
             画面を開いている間、注文状況を自動で更新します。
           </Text>
