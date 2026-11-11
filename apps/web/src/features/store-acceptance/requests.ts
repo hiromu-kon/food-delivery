@@ -1,8 +1,4 @@
-import {
-  menuResponseSchema,
-  storeAcceptanceResponseSchema,
-  storeMeResponseSchema,
-} from '@repo/contract';
+import { storeAcceptanceResponseSchema, storeMeResponseSchema } from '@repo/contract';
 
 import { apiClient } from '@/api/client';
 
@@ -21,16 +17,11 @@ export async function loadAcceptance() {
   const context = storeMeResponseSchema.parse(
     await read(await apiClient.store.me.$get({ query: {} })),
   );
-  const menu = menuResponseSchema.parse(
-    await read(
-      await apiClient.stores[':storeId'].menu.$get({
-        param: { storeId: context.store.id },
-        query: {},
-      }),
-    ),
+  const result = storeAcceptanceResponseSchema.parse(
+    await read(await apiClient.store.acceptance.$get()),
   );
-  if (menu.store.id !== context.store.id) throw new AcceptanceError(403);
-  return { ...context.store, isAcceptingOrders: menu.store.isAcceptingOrders };
+  if (result.store.id !== context.store.id) throw new AcceptanceError(403);
+  return { ...context.store, isAcceptingOrders: result.store.isAcceptingOrders };
 }
 
 export async function saveAcceptance(storeId: string, isAcceptingOrders: boolean) {

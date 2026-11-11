@@ -24,22 +24,14 @@ it('uses authenticated membership and reads the persisted paused state', async (
     .mockResolvedValueOnce(
       Response.json({
         store: {
-          ...context.store,
-          description: '',
-          address: '',
-          latitude: 35,
-          longitude: 139,
-          deliveryRadiusMeters: 1000,
-          minimumOrderAmount: 0,
+          id,
           isAcceptingOrders: false,
-          photoUrl: null,
         },
-        categories: [],
       }),
     );
   vi.stubGlobal('fetch', fetch);
   await expect(loadAcceptance()).resolves.toEqual({ ...context.store, isAcceptingOrders: false });
-  expect(String(fetch.mock.calls[1]?.[0])).toBe(`http://api.example.test/stores/${id}/menu`);
+  expect(String(fetch.mock.calls[1]?.[0])).toBe('http://api.example.test/store/acceptance');
 });
 it('does not write after membership changes or access is revoked', async () => {
   for (const response of [
