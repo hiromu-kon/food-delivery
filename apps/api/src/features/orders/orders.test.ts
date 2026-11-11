@@ -585,3 +585,36 @@ describe('F-08 customer cancellation', () => {
     expect((await db.select().from(orders))[0]!.paymentVoidedAt).toBeNull();
   });
 });
+
+describe('customer order store photos', () => {
+  it('returns the current store photo without changing the saved order and scopes reads to its owner', async () => {
+    const order = await placedOrder();
+    const read = (path: string) => app.request(path, { headers: { cookie } });
+    const list = async () =>
+      (await (await read('/orders')).json()) as {
+        orders: { id: string; storePhotoUrl: string | null }[];
+      };
+    expect((await list()).orders[0]).toMatchObject({ id: order.id, storePhotoUrl: null });
+    const photo = 'https://images.example.test/current-store.jpg';
+    await db.update(stores).set({ photoUrl: photo }).where(eq(stores.id, order.storeId));
+    expect((await list()).orders[0]).toMatchObject({ id: order.id, storePhotoUrl: photo });
+    expect(await (await read(`/orders/${order.id}`)).json()).toMatchObject({
+      order: { storePhotoUrl: photo, total: order.total },
+    });
+    expect((await db.select().from(orderItems))[0]).toMatchObject({
+      name: 'Curry',
+      unitPrice: 700,
+    });
+    const other = randomUUID();
+    await db.insert(users).values({
+      id: other,
+      name: 'Other',
+      email: `${other}@example.test`,
+      phoneNumber: '09011111111',
+    });
+    await db.update(orders).set({ userId: other }).where(eq(orders.id, order.id));
+    expect((await list()).orders).toEqual([]);
+    expect((await read(`/orders/${order.id}`)).status).toBe(404);
+    expect((await app.request('/orders')).status).toBe(401);
+  });
+});

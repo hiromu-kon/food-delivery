@@ -9,6 +9,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Receipt } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Alert, AppState, Image, Pressable, View } from 'react-native';
+import { FoodPhoto } from '@/components/store/food-photo';
 import { createOrdersTransport } from '@/api/orders';
 import { OrderSteps } from '@/components/order/order-steps';
 import { FormError, ScreenShell } from '@/features/auth/auth-screen';
@@ -83,6 +84,11 @@ export function OrderHistoryScreen() {
             }
             className="border-default bg-base min-h-22 flex-row items-center justify-between gap-3 border-b py-4"
           >
+            <FoodPhoto
+              photoUrl={order.storePhotoUrl ?? undefined}
+              label={`${order.storeName}の現在の店舗写真`}
+              className="size-14 shrink-0"
+            />
             <View className="min-w-0 flex-1 gap-1">
               <Text variant="label-l">{order.storeName}</Text>
               <View className="flex-row flex-wrap gap-x-3 gap-y-1">
