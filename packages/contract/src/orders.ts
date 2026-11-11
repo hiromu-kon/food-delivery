@@ -38,7 +38,6 @@ export const customerOrderDetailSchema = customerOrderSummarySchema.extend({
   building: z.string(),
   dropoffLocation: z.enum(['front_door', 'delivery_box', 'other']).nullable(),
   fulfillment: z.enum(['hand_delivery', 'leave_at_door']),
-  // Only available after a leave-at-door delivery is completed.
   deliveryPhotoUrl: z.url().nullable(),
 });
 export type CustomerOrderDetail = z.infer<typeof customerOrderDetailSchema>;

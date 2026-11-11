@@ -61,7 +61,6 @@ function updated(cart: Cart): CartChangeResult {
   return result.status === 'invalid' ? result : { status: 'updated', cart };
 }
 
-/** 同商品への追加は数量を加算し、渡された単価に更新する。 */
 export function addCartItem(
   cart: Cart,
   item: CartItem,
@@ -71,7 +70,6 @@ export function addCartItem(
   if (existing.status === 'invalid') return existing;
   const reason = validateItem(item);
   if (reason) return { status: 'invalid', reason };
-  // 確認を出す前にも新商品の金額が計算可能か検証する。
   const incoming = subtotal([item]);
   if (incoming.status === 'invalid') return incoming;
   if (cart.length > 0 && cart[0]?.restaurantId !== item.restaurantId) {
@@ -91,7 +89,7 @@ export function addCartItem(
   );
 }
 
-/** 既存の数量UIに合わせて 0 は削除として扱う。存在しない商品は変更しない。 */
+/** 数量UIの既存呼び出しが 0 を削除として送るため、その契約を保つ。 */
 export function setCartItemQuantity(
   cart: Cart,
   productId: string,

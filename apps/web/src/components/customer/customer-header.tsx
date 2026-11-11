@@ -8,7 +8,6 @@ type CustomerHeaderProps = {
   className?: string;
 };
 
-// モバイルでは各画面のヘッダーを使い、PC では画面をまたぐ移動を上にまとめる
 function CustomerHeader({ brandHref = '/', items, className }: CustomerHeaderProps) {
   return (
     <header

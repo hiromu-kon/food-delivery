@@ -10,7 +10,6 @@ type CartBarProps = Omit<React.ComponentProps<typeof Pressable>, 'children'> & {
   subtotal: number;
 };
 
-// 小計と点数は API / カートの値を受け取り、この部品では計算しない
 function CartBar({ count, subtotal, className, ...props }: CartBarProps) {
   if (count <= 0) return null;
   return (

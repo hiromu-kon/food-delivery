@@ -41,7 +41,6 @@ function RestoreCheckout({ attemptKey }: { attemptKey: string }) {
   const restore = useCallback(() => {
     void AsyncStorage.getItem(attemptKey)
       .then((raw) => {
-        // This app writes only opaque Stripe IDs, never card details.
         setAttempt(raw ? attemptSchema.parse(JSON.parse(raw)) : null);
       })
       .catch(() => setError('注文の送信状況を読み込めません。再試行してください。'));

@@ -13,7 +13,7 @@ const request = {
 };
 afterEach(() => vi.unstubAllGlobals());
 it('POSTs the authenticated request and UUID key with no price/card data', async () => {
-  const fetch = vi.fn(() =>
+  const fetch = vi.fn<typeof globalThis.fetch>(() =>
     Promise.resolve(
       new Response(JSON.stringify({ order: { id: 'order', total: 9999 } }), { status: 201 }),
     ),
@@ -27,14 +27,14 @@ it('POSTs the authenticated request and UUID key with no price/card data', async
     expect.objectContaining({
       method: 'POST',
       credentials: 'omit',
-      headers: {
-        Authorization: 'Bearer signed-session',
-        'Content-Type': 'application/json',
-        'Idempotency-Key': 'uuid-key',
-      },
       body: JSON.stringify(request),
     }),
   );
+  const init = fetch.mock.calls[0]?.[1];
+  const headers = new Headers(init?.headers);
+  expect(headers.get('Authorization')).toBe('Bearer signed-session');
+  expect(headers.get('Content-Type')).toBe('application/json');
+  expect(headers.get('Idempotency-Key')).toBe('uuid-key');
 });
 it.each([401, 402, 409, 422, 500, 503])(
   'exposes HTTP %s as a typed checkout failure',

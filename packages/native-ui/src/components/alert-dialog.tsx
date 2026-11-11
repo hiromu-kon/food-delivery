@@ -16,7 +16,6 @@ type AlertDialogProps = {
   loading?: boolean;
 };
 
-// Modal で背後の操作・読み上げを遮断し、外側を押しても確定操作を取り消さない
 function AlertDialog({
   open,
   onOpenChange,

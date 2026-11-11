@@ -18,7 +18,6 @@ const variantClassNames = {
 
 type TextVariant = keyof typeof variantClassNames;
 
-// Button のように、中の文字の見た目を親が決める部品のために使う
 const TextClassContext = React.createContext<string | undefined>(undefined);
 
 type TextProps = React.ComponentProps<typeof RNText> & {

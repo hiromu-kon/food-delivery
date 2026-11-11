@@ -6,7 +6,6 @@ import type { AuthEnv } from '../../middleware/auth';
 import { menuParamsSchema, menuQuerySchema } from './menu.schema';
 import { createMenuService } from './menu.service';
 
-// 親の /stores ルートで有効customerのセッションを検証する。
 export function createMenuRoutes(db: Db) {
   const service = createMenuService(db);
   return new Hono<AuthEnv>().get(

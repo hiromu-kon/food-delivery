@@ -29,7 +29,6 @@ export function PaymentCard({
       disabled={disabled}
       accessibilityLabel="カード番号・有効期限・セキュリティコード"
       onCardChange={(card) => onComplete(card.complete)}
-      // Native SDK styles mirror color.text.primary / border.strong / radius.sm tokens.
       cardStyle={{
         backgroundColor: '#ffffff',
         textColor: '#1d2126',
