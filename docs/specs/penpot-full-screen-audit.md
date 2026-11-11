@@ -8,7 +8,7 @@
 
 本番向け画面は35単位（Web注文者15、注文者native11、店舗Web6、placeholder3）。店舗の商品編集は独立URLがないため画面内モードを1単位とする。実装済み32のうちboardに対応する基本画面は30単位、追加の2単位はboardなし。開発用ギャラリー5ルートは別枠。loading/error boundaryは画面数に加算せずvariantとして扱う。
 
-証跡はDraft PR添付の `evidence.zip` に収録する。`boards/<board-id>.png` は実Penpot表示、`web/` と `native-*.png` は実描画、`pairs/` は左右比較、JSONは実操作時の文字・状態記録。API応答のモックで成功画面を作っていない。画像は架空のQA画像、店舗・注文・利用者は専用DBの合成データで、見本の食品写真や値の一致は要求しない。
+左右比較画像30点と操作動画4本はDraft PRへ直接添付する。生画像・操作記録・SHA256 manifestはrepo外の `evidence.zip` に保存した（gh --attachはZIP非対応）。`boards/<board-id>.png` は実Penpot表示、`web/` と `native-*.png` は実描画、`pairs/` は左右比較、JSONは実操作時の文字・状態記録。API応答のモックで成功画面を作っていない。画像は架空のQA画像、店舗・注文・利用者は専用DBの合成データで、見本の食品写真や値の一致は要求しない。
 
 ## 本番向け画面とルート
 
