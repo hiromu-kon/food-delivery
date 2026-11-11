@@ -19,7 +19,7 @@ export function AuthShell({
   return (
     <main className="mx-auto w-full max-w-lg md:py-8">
       {login ? (
-        <header className="space-y-3 px-6 pt-12 pb-8 text-center">
+        <header className="space-y-2 px-6 pt-12 pb-8">
           <h1 className="text-display text-brand font-display">{title}</h1>
           {description && <p className="text-body-m text-secondary">{description}</p>}
         </header>

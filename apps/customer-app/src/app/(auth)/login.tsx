@@ -21,7 +21,7 @@ export default function LoginScreen() {
   const resend = useAuthAction();
   return (
     <ScreenShell title="ログイン" login>
-      <View className="items-center gap-2 py-8">
+      <View className="gap-2 py-8">
         <Text variant="display" className="text-brand" style={{ fontSize: 30 }}>
           Food Delivery
         </Text>
@@ -68,7 +68,7 @@ export default function LoginScreen() {
         パスワードを忘れた方
       </Button>
       <View className="border-default gap-4 border-t pt-6">
-        <Text className="text-secondary text-center">はじめての方</Text>
+        <Text className="text-secondary">はじめての方</Text>
         <Button variant="secondary" onPress={() => router.push('/sign-up')}>
           会員登録する
         </Button>
