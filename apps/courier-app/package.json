@@ -8,7 +8,8 @@
     "android": "expo start --port 8082 --android",
     "ios": "expo start --port 8082 --ios",
     "typecheck": "tsc",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@repo/contract": "workspace:*",
@@ -29,13 +30,15 @@
     "react-native-svg": "catalog:",
     "tailwindcss": "catalog:",
     "uniwind": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "expo-secure-store": "catalog:"
   },
   "devDependencies": {
     "@repo/api": "workspace:*",
     "@repo/config": "workspace:*",
     "@types/react": "catalog:",
     "eslint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
