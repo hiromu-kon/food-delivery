@@ -7,7 +7,10 @@ export default async function AdminDashboardPage() {
     <>
       <h1 className="text-heading-l">運営管理</h1>
       <p className="text-body-m">運営アカウントでログインしています。</p>
-      <Link href="/admin/couriers">配達員の管理</Link>
+      <nav className="flex gap-4">
+        <Link href="/admin/couriers">配達員の管理</Link>
+        <Link href="/admin/orders">注文の管理</Link>
+      </nav>
     </>
   );
 }
