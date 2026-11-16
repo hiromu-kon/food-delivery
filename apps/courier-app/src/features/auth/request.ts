@@ -19,6 +19,10 @@ export async function assertAuthSuccess(response: {
   const parsed = z.object({ code: z.string() }).safeParse(await response.json().catch(() => null));
   const code = parsed.success ? parsed.data.code : '';
   const messages: Record<string, string> = {
+    ORDER_ALREADY_ASSIGNED: 'ほかの配達員が担当したか、配達待ちではなくなりました。',
+    COURIER_UNAVAILABLE: '稼働中に切り替えて、もう一度お試しください。',
+    COURIER_BUSY: 'すでに担当中の配達があります。担当中の配達を再確認してください。',
+    NOT_FOUND: '配達待ちの注文が見つかりません。一覧を更新してください。',
     EMAIL_NOT_VERIFIED: 'メールのリンクを開いて確認してからログインしてください。',
     ACCOUNT_DISABLED: 'このアカウントは利用できません。運営にお問い合わせください。',
     INVALID_CREDENTIALS: 'メールアドレスまたはパスワードを確認してください。',

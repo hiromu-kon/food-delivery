@@ -1,6 +1,6 @@
 {
-  "id": "1f9d54e9-aa79-42cb-bc7d-87d765fea74d",
-  "prevId": "b742e34c-ec26-4e01-a22b-49c7759a1fb1",
+  "id": "bef14d71-999b-405f-929a-e6d3df4bf1bd",
+  "prevId": "5134b69e-19b5-4191-afb8-2b0720e12694",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1347,6 +1347,60 @@
       },
       "isRLSEnabled": false
     },
+    "public.order_status_history": {
+      "name": "order_status_history",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "order_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "order_status_history_order_id_orders_id_fk": {
+          "name": "order_status_history_order_id_orders_id_fk",
+          "tableFrom": "order_status_history",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.orders": {
       "name": "orders",
       "schema": "",
@@ -1493,7 +1547,24 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "orders_one_active_per_courier": {
+          "name": "orders_one_active_per_courier",
+          "columns": [
+            {
+              "expression": "courier_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"orders\".\"status\" in ('preparing', 'ready', 'delivering')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "orders_id_checkout_attempts_id_fk": {
           "name": "orders_id_checkout_attempts_id_fk",
