@@ -8,6 +8,7 @@
 | [order-status.md](order-status.md)     | 注文の状態と遷移                       |
 | [business-rules.md](business-rules.md) | 金額・期限・配達エリアなどの業務ルール |
 | [screens.md](screens.md)               | 画面一覧と遷移                         |
+| [admin-auth.md](admin-auth.md)         | 運営認証と初期アカウント発行           |
 | [auth.md](auth.md)                     | 認証 API・セッション・ロールの扱い     |
 
 ## ID の付け方
