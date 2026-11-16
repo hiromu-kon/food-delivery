@@ -55,3 +55,27 @@ export function assertStoreOrderAction(
   if (action === 'accept' && now >= acceptanceDeadline(createdAt))
     throw new DomainError('ORDER_INVALID_TRANSITION', '受付期限を過ぎています');
 }
+
+export function assertAdminCancellation(status: OrderStatus, reason: string | null): void {
+  if (!(
+    ['preparing', 'ready', 'delivering'].includes(status) ||
+    (status === 'canceled' && reason === 'admin')
+  ))
+    throw new DomainError('ORDER_NOT_CANCELABLE', '受付後・配達完了前の注文だけキャンセルできます');
+}
+export function assertAdminUnassignment(status: OrderStatus): void {
+  if (status === 'delivered' || status === 'canceled')
+    throw new DomainError(
+      'ORDER_INVALID_TRANSITION',
+      '完了・キャンセル済みの注文は担当解除できません',
+    );
+}
+
+export function canRetryRefund(startedAt: Date, now: Date): boolean {
+  return now.getTime() - startedAt.getTime() < 23 * 3600000;
+}
+
+export function japanOrderDateRange(date: string): { start: Date; end: Date } {
+  const start = new Date(`${date}T00:00:00+09:00`);
+  return { start, end: new Date(start.getTime() + 86400000) };
+}

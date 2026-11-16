@@ -1,4 +1,6 @@
 import { createCourierAdminRoutes } from './features/courier-admin/courier-admin.routes';
+import { createAdminOrderRoutes } from './features/admin-orders/admin-orders.routes';
+import type { TestRefundClient } from './integrations/stripe/test-refunds';
 import type { Db } from '@repo/db';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -24,6 +26,7 @@ import { errorHandler } from './middleware/error-handler';
 export function createApp(options: {
   auth: AuthService;
   stripe?: StripeClient;
+  testRefunds?: TestRefundClient;
   geocoder?: Geocoder;
   db: Db;
   config: AuthConfig;
@@ -60,6 +63,10 @@ export function createApp(options: {
         options.config,
         options.stripe ?? createStripeClient(),
       ),
+    )
+    .route(
+      '/admin/orders',
+      createAdminOrderRoutes(options.auth, options.db, options.config, options.testRefunds),
     )
     .route('/health', healthRoutes)
     .route('/admin/couriers', createCourierAdminRoutes(options.auth, options.db, options.config))

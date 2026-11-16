@@ -71,6 +71,20 @@
       "when": 1794835598924,
       "tag": "0009_hesitant_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794839157505,
+      "tag": "0010_cooing_cyclops",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794839286555,
+      "tag": "0011_bright_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

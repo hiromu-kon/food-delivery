@@ -1,4 +1,11 @@
-import { orders, orderItems, storeStaffMemberships, users, type Db } from '@repo/db';
+import {
+  orderStatusHistory,
+  orders,
+  orderItems,
+  storeStaffMemberships,
+  users,
+  type Db,
+} from '@repo/db';
 import { DomainError } from '@repo/domain';
 import { and, desc, eq, exists } from 'drizzle-orm';
 
@@ -49,6 +56,14 @@ export function createStoreOrderRepository(db: Db) {
         .orderBy(orderItems.menuItemId);
     },
     async update(tx: Tx, id: string, values: Partial<typeof orders.$inferInsert>) {
+      if (values.status) {
+        const [previous] = await tx
+          .select({ status: orders.status })
+          .from(orders)
+          .where(eq(orders.id, id));
+        if (previous?.status !== values.status)
+          await tx.insert(orderStatusHistory).values({ orderId: id, status: values.status });
+      }
       await tx.update(orders).set(values).where(eq(orders.id, id));
     },
   };
