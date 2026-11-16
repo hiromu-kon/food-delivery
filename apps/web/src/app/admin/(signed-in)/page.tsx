@@ -1,4 +1,5 @@
 import Link from 'next/link';
+
 import { requireAdminContext } from '@/features/admin-auth/session';
 
 export default async function AdminDashboardPage() {
@@ -10,6 +11,9 @@ export default async function AdminDashboardPage() {
       <nav className="flex gap-4">
         <Link href="/admin/couriers">配達員の管理</Link>
         <Link href="/admin/orders">注文の管理</Link>
+        <Link href="/admin/stores" className="text-brand underline">
+          店舗管理へ
+        </Link>
       </nav>
     </>
   );
