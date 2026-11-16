@@ -1,20 +1,25 @@
-import { BikeIcon, ReceiptTextIcon, StoreIcon } from 'lucide-react';
+import { Suspense, type ReactNode } from 'react';
 
-import { SideNav } from '@/components/ui/side-nav';
+import { AdminSessionGuard } from '@/features/admin-auth/session-guard';
+import { requireAdminContext } from '@/features/admin-auth/session';
+
+async function SignedIn({ children }: { children: ReactNode }) {
+  await requireAdminContext();
+  return <AdminSessionGuard>{children}</AdminSessionGuard>;
+}
 
 export default function AdminSignedInLayout({ children }: LayoutProps<'/admin'>) {
   return (
-    <div className="flex flex-1">
-      <SideNav
-        title="Food Delivery"
-        subtitle="運営の管理"
-        items={[
-          { href: '/admin/orders', label: '注文', icon: <ReceiptTextIcon /> },
-          { href: '/admin/stores', label: '店舗', icon: <StoreIcon /> },
-          { href: '/admin/couriers', label: '配達員', icon: <BikeIcon /> },
-        ]}
-      />
-      <main className="flex min-w-0 flex-1 flex-col gap-6 px-10 pt-8 pb-10">{children}</main>
-    </div>
+    <Suspense
+      fallback={
+        <p role="status" className="p-6">
+          運営の利用状態を確認しています…
+        </p>
+      }
+    >
+      <SignedIn>{children}</SignedIn>
+    </Suspense>
   );
 }
+
+export const instant = false;

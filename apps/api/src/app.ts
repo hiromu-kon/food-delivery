@@ -4,6 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
 
+import { createAdminAuthRoutes } from './features/admin-auth/admin-auth.routes';
 import { createOrderRoutes } from './features/orders/orders.routes';
 import { createStripeClient } from './integrations/stripe/stripe';
 import type { StripeClient } from './integrations/stripe/client';
@@ -59,6 +60,7 @@ export function createApp(options: {
       ),
     )
     .route('/health', healthRoutes)
+    .route('/admin', createAdminAuthRoutes(options.auth, options.db, options.config))
     .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
     .route(
       '/store',
