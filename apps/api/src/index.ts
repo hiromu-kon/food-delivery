@@ -5,6 +5,8 @@ import { createDb } from '@repo/db';
 import { createApp } from './app';
 import { loadEnv } from './env';
 import { createAuthService } from './features/auth/auth.service';
+import { startOrderExpiryJob } from './features/order-expiry/order-expiry.job';
+import { createOrderExpiryService } from './features/order-expiry/order-expiry.service';
 import { createOpenCageGeocoder } from './integrations/maps/opencage';
 import { createStripeClient } from './integrations/stripe/stripe';
 import { createSmtpSender } from './integrations/email/smtp';
@@ -28,9 +30,10 @@ const email = createSmtpSender({
   password: env.SMTP_PASSWORD,
 });
 const auth = createAuthService(db, email, config);
+const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
 const app = createApp({
   auth,
-  stripe: createStripeClient(env.STRIPE_SECRET_KEY),
+  stripe,
   db,
   config,
   geocoder: createOpenCageGeocoder({
@@ -43,3 +46,11 @@ const app = createApp({
 serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`API listening on http://localhost:${info.port}`);
 });
+
+const expiry = createOrderExpiryService(db, stripe);
+startOrderExpiryJob(
+  () => expiry.run(),
+  () => {
+    console.error('注文期限切れ取消の未確認処理があります。次回実行で再照合します');
+  },
+);

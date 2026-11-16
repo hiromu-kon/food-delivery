@@ -31,8 +31,14 @@ export function assertCustomerCancellation(status: OrderStatus, reason: string |
     throw new DomainError('ORDER_NOT_CANCELABLE', '受付待ちの注文だけ取り消せます');
 }
 
+const acceptanceWindowMs = 10 * 60 * 1000;
+
 export function acceptanceDeadline(createdAt: Date): Date {
-  return new Date(createdAt.getTime() + 10 * 60 * 1000);
+  return new Date(createdAt.getTime() + acceptanceWindowMs);
+}
+
+export function acceptanceExpiryCutoff(now: Date): Date {
+  return new Date(now.getTime() - acceptanceWindowMs);
 }
 
 export function assertStoreOrderAction(
