@@ -1,6 +1,7 @@
 export type PaymentIntent = {
   id: string;
   status: string;
+  livemode?: boolean;
   client_secret?: string | null | undefined;
   confirmation_method?: string;
   amount: number;

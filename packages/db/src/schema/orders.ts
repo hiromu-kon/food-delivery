@@ -37,6 +37,7 @@ export const checkoutAttempts = pgTable(
     quote: jsonb().$type<CheckoutQuote>().notNull(),
     paymentIntentId: text().unique(),
     failed: integer().notNull().default(0),
+    paymentVoidedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique('checkout_attempts_user_key').on(t.userId, t.idempotencyKey)],

@@ -1,3 +1,4 @@
+import { createCheckoutExpiryService } from './features/checkout-expiry/checkout-expiry.service';
 import { createPostgresDeliveryPhotoStorage } from './integrations/delivery-photos/postgres';
 import { serve } from '@hono/node-server';
 
@@ -66,4 +67,11 @@ startOrderExpiryJob(
     return { failed: 0 };
   },
   () => console.error('置き配写真の期限切れ削除に失敗しました。次回実行で再試行します'),
+);
+
+const checkoutExpiry = createCheckoutExpiryService(db, stripe);
+startOrderExpiryJob(
+  () => checkoutExpiry.run(),
+  () =>
+    console.error('未保存の注文決済の期限切れ照合に失敗しました。運用確認と次回の再照合が必要です'),
 );

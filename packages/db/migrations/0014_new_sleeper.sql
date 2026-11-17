@@ -1,0 +1,1 @@
+ALTER TABLE "checkout_attempts" ADD COLUMN "payment_voided_at" timestamp with time zone;
