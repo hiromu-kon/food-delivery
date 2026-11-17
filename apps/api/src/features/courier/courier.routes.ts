@@ -1,5 +1,6 @@
+import type { DeliveryPhotoStorage } from '../../integrations/delivery-photos/storage';
 import { zValidator } from '@hono/zod-validator';
-import { orderIdSchema } from '@repo/contract';
+import { deliveryPhotoUploadSchema, orderIdSchema } from '@repo/contract';
 import { createCourierOrdersRepository } from './courier-orders.repository';
 import type { Db } from '@repo/db';
 import { Hono } from 'hono';
@@ -10,8 +11,13 @@ import { createCourierRepository } from './courier.repository';
 import { courierAvailabilitySchema } from './courier.schema';
 import { createCourierService } from './courier.service';
 
-export function createCourierRoutes(auth: AuthService, db: Db, config: AuthConfig) {
-  const deliveries = createCourierOrdersRepository(db);
+export function createCourierRoutes(
+  auth: AuthService,
+  db: Db,
+  config: AuthConfig,
+  photos?: DeliveryPhotoStorage,
+) {
+  const deliveries = createCourierOrdersRepository(db, photos);
   const service = createCourierService(createCourierRepository(db));
   return new Hono<AuthEnv>()
     .use(requireSession(auth, db, [config.webURL, new URL(config.baseURL).origin]))
@@ -31,6 +37,26 @@ export function createCourierRoutes(auth: AuthService, db: Db, config: AuthConfi
     )
     .post('/orders/:id/receive', zValidator('param', orderIdSchema), async (c) =>
       c.json(await deliveries.receive(c.get('authUser').id, c.req.valid('param').id), 200),
+    )
+    .post(
+      '/orders/:id/photo',
+      zValidator('param', orderIdSchema),
+      zValidator('json', deliveryPhotoUploadSchema, (result, c) => {
+        if (!result.success)
+          return c.json(
+            { code: 'VALIDATION_ERROR', message: '2MB以内のJPEG写真を送信してください' },
+            400,
+          );
+      }),
+      async (c) =>
+        c.json(
+          await deliveries.uploadPhoto(
+            c.get('authUser').id,
+            c.req.valid('param').id,
+            c.req.valid('json'),
+          ),
+          200,
+        ),
     )
     .post('/orders/:id/deliver', zValidator('param', orderIdSchema), async (c) =>
       c.json(await deliveries.deliver(c.get('authUser').id, c.req.valid('param').id), 200),

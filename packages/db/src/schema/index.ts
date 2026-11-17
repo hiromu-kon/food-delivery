@@ -5,3 +5,4 @@ export * from './menu';
 export * from './store-staff';
 export * from './orders';
 export * from './couriers';
+export * from './delivery-photos';

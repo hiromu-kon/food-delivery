@@ -31,7 +31,9 @@
     "tailwindcss": "catalog:",
     "uniwind": "catalog:",
     "zod": "catalog:",
-    "expo-secure-store": "catalog:"
+    "expo-secure-store": "catalog:",
+    "expo-camera": "catalog:",
+    "expo-file-system": "catalog:"
   },
   "devDependencies": {
     "@repo/api": "workspace:*",
@@ -39,6 +41,8 @@
     "@types/react": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "react-test-renderer": "catalog:",
+    "@types/react-test-renderer": "catalog:"
   }
 }

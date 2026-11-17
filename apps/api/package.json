@@ -25,7 +25,8 @@
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "nodemailer": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "sharp": "catalog:"
   },
   "devDependencies": {
     "@repo/config": "workspace:*",

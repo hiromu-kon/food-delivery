@@ -12,6 +12,7 @@ const httpOrigin = z
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    DELIVERY_PHOTO_STORAGE: z.enum(['disabled', 'postgres']).default('disabled'),
     PORT: z.coerce.number().int().positive().default(8787),
     DATABASE_URL: z.url(),
     AUTH_URL: httpOrigin.default('http://localhost:8787'),

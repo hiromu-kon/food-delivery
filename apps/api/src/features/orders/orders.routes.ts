@@ -1,3 +1,4 @@
+import type { DeliveryPhotoStorage } from '../../integrations/delivery-photos/storage';
 import { orderIdSchema } from '@repo/contract';
 import { zValidator } from '@hono/zod-validator';
 import type { Db } from '@repo/db';
@@ -14,8 +15,9 @@ export function createOrderRoutes(
   db: Db,
   config: AuthConfig,
   stripe: StripeClient,
+  photos?: DeliveryPhotoStorage,
 ) {
-  const service = createOrderService(db, stripe);
+  const service = createOrderService(db, stripe, undefined, photos);
   return new Hono<AuthEnv>()
     .use(requireSession(auth, db, [config.webURL, new URL(config.baseURL).origin]))
     .use(requireRole(['customer'], true))

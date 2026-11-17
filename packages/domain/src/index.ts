@@ -6,3 +6,4 @@ export * from './cart/cart';
 export * from './display/format';
 export * from './order/progress';
 export * from './geo/distance';
+export * from './order/delivery-photo';

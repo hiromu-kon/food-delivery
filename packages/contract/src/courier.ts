@@ -29,6 +29,7 @@ export const courierOrderDetailSchema = courierOrderSummarySchema.extend({
   dropoffLocation: z.enum(['front_door', 'delivery_box', 'other']).nullable(),
   deliveryNote: z.string().optional(),
   isAssignedToMe: z.boolean(),
+  hasDeliveryPhoto: z.boolean().default(false),
 });
 export const courierOrderListSchema = z.object({ orders: z.array(courierOrderSummarySchema) });
 export const courierOrderResponseSchema = z.object({ order: courierOrderDetailSchema });

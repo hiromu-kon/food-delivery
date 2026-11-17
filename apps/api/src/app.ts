@@ -1,3 +1,5 @@
+import type { DeliveryPhotoStorage } from './integrations/delivery-photos/storage';
+import { deliveryPhotoMaxBytes } from '@repo/contract';
 import { createCourierAdminRoutes } from './features/courier-admin/courier-admin.routes';
 import { createAdminOrderRoutes } from './features/admin-orders/admin-orders.routes';
 import type { TestRefundClient } from './integrations/stripe/test-refunds';
@@ -25,6 +27,7 @@ import { errorHandler } from './middleware/error-handler';
 
 export function createApp(options: {
   auth: AuthService;
+  deliveryPhotos?: DeliveryPhotoStorage | undefined;
   stripe?: StripeClient;
   testRefunds?: TestRefundClient;
   geocoder?: Geocoder;
@@ -43,12 +46,15 @@ export function createApp(options: {
         exposeHeaders: ['set-auth-token', 'x-request-id', 'retry-after'],
       }),
     )
-    .use(
-      bodyLimit({
-        maxSize: 16 * 1024,
-        onError: (c) => c.json({ code: 'PAYLOAD_TOO_LARGE', message: '入力が長すぎます' }, 413),
-      }),
-    )
+    .use(async (c, next) => {
+      const photoUpload =
+        c.req.method === 'POST' && /^\/courier\/orders\/[^/]+\/photo$/.test(c.req.path);
+      if (photoUpload) c.header('Cache-Control', 'private, no-store');
+      return bodyLimit({
+        maxSize: photoUpload ? 4 * Math.ceil(deliveryPhotoMaxBytes / 3) + 1024 : 16 * 1024,
+        onError: (ctx) => ctx.json({ code: 'PAYLOAD_TOO_LARGE', message: '入力が長すぎます' }, 413),
+      })(c, next);
+    })
     .use(async (c, next) => {
       c.set('clientIp', options.getClientIp(c));
       await next();
@@ -62,6 +68,7 @@ export function createApp(options: {
         options.db,
         options.config,
         options.stripe ?? createStripeClient(),
+        options.deliveryPhotos,
       ),
     )
     .route(
@@ -79,7 +86,10 @@ export function createApp(options: {
         options.geocoder ?? createOpenCageGeocoder(),
       ),
     )
-    .route('/courier', createCourierRoutes(options.auth, options.db, options.config))
+    .route(
+      '/courier',
+      createCourierRoutes(options.auth, options.db, options.config, options.deliveryPhotos),
+    )
     .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
     .route(
       '/store',

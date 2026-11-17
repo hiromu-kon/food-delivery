@@ -8,6 +8,13 @@ const base = {
 };
 
 describe('loadEnv', () => {
+  it('R-15 写真保存は明示設定まで無効で、未知の保存先を拒否する', () => {
+    expect(loadEnv(base).DELIVERY_PHOTO_STORAGE).toBe('disabled');
+    expect(loadEnv({ ...base, DELIVERY_PHOTO_STORAGE: 'postgres' }).DELIVERY_PHOTO_STORAGE).toBe(
+      'postgres',
+    );
+    expect(() => loadEnv({ ...base, DELIVERY_PHOTO_STORAGE: 'memory' })).toThrow();
+  });
   it('地図APIのキーは任意でタイムアウトは1〜30000msに制限する', () => {
     expect(loadEnv(base).OPENCAGE_API_KEY).toBeUndefined();
     expect(loadEnv(base).GEOCODING_TIMEOUT_MS).toBe(5000);

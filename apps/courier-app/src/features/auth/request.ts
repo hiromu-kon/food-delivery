@@ -20,7 +20,10 @@ export async function assertAuthSuccess(response: {
   const code = parsed.success ? parsed.data.code : '';
   const messages: Record<string, string> = {
     ORDER_ALREADY_ASSIGNED: 'ほかの配達員が担当したか、配達待ちではなくなりました。',
-    DELIVERY_PHOTO_REQUIRED: '置き配写真の保存に対応するまで、置き配の配達完了はできません。',
+    DELIVERY_PHOTO_REQUIRED: '置いた場所の写真を撮影・送信してから、配達完了にしてください。',
+    DELIVERY_PHOTO_UNAVAILABLE: '写真保存を利用できません。運営に連絡してから再試行してください。',
+    DELIVERY_PHOTO_INVALID: '2MB以内のJPEG写真を撮り直して送信してください。',
+    PAYLOAD_TOO_LARGE: '写真が大きすぎます。2MB以内になるよう撮り直してください。',
     ORDER_INVALID_TRANSITION: '注文状態が変わりました。画面を再確認してください。',
     COURIER_UNAVAILABLE: '稼働中に切り替えて、もう一度お試しください。',
     COURIER_BUSY: 'すでに担当中の配達があります。担当中の配達を再確認してください。',

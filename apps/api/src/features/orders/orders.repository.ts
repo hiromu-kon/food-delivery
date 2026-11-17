@@ -83,6 +83,7 @@ export function createOrderRepository(db: Db) {
           subtotal: orders.subtotal,
           deliveryFee: orders.deliveryFee,
           fulfillment: orders.fulfillment,
+          courierId: orders.courierId,
           address: orders.address,
           building: orders.building,
           dropoffLocation: orders.dropoffLocation,
