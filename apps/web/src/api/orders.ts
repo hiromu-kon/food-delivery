@@ -66,13 +66,17 @@ export async function postOrder(
       response.status >= 500 || response.status === 409 || response.status === 429,
     );
   }
-  try {
-    if (response.status === 202) {
+  if (response.status === 202) {
+    try {
       const action = checkoutActionRequiredSchema.parse(await response.json());
       if (!handleAction) throw new Error();
       await handleAction(action.clientSecret);
-      return await postOrder(apiUrl, attempt, request);
+    } catch {
+      throw new OrderError('注文結果を確認できません。同じ注文を再確認してください。', true);
     }
+    return postOrder(apiUrl, attempt, request);
+  }
+  try {
     return z.object({ order: z.object({ id: z.string().min(1) }) }).parse(await response.json())
       .order;
   } catch {

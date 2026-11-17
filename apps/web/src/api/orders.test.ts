@@ -85,6 +85,20 @@ it('R-05 handles one action and retries the exact attempt before accepting an or
   expect(request.mock.calls[0]?.[1]?.body).toEqual(request.mock.calls[1]?.[1]?.body);
   expect(new Headers(request.mock.calls[1]?.[1]?.headers).get('Idempotency-Key')).toBe(attempt.key);
 });
+it('preserves definitive errors from the request after authentication', async () => {
+  const request = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      Response.json(
+        { status: 'requires_action', clientSecret: 'pi_test_secret_synthetic' },
+        { status: 202 },
+      ),
+    )
+    .mockResolvedValueOnce(Response.json({ code: 'ORDER_NOT_ORDERABLE' }, { status: 422 }));
+  await expect(
+    postOrder('https://api.example', attempt, request, vi.fn().mockResolvedValue(undefined)),
+  ).rejects.toMatchObject({ retrySame: false });
+});
 it('R-05 cancellation and repeated action retain the attempt without looping or reporting success', async () => {
   for (const action of [
     vi.fn().mockRejectedValue(new Error('canceled')),
