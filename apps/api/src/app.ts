@@ -1,3 +1,4 @@
+import { createCourierAdminRoutes } from './features/courier-admin/courier-admin.routes';
 import type { Db } from '@repo/db';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -61,6 +62,7 @@ export function createApp(options: {
       ),
     )
     .route('/health', healthRoutes)
+    .route('/admin/couriers', createCourierAdminRoutes(options.auth, options.db, options.config))
     .route('/admin', createAdminAuthRoutes(options.auth, options.db, options.config))
     .route('/courier', createCourierRoutes(options.auth, options.db, options.config))
     .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
