@@ -20,11 +20,20 @@ export function createCourierRoutes(auth: AuthService, db: Db, config: AuthConfi
     .get('/orders/current', async (c) =>
       c.json(await deliveries.current(c.get('authUser').id), 200),
     )
+    .get('/orders/history', async (c) =>
+      c.json(await deliveries.history(c.get('authUser').id), 200),
+    )
     .get('/orders/:id', zValidator('param', orderIdSchema), async (c) =>
       c.json(await deliveries.detail(c.get('authUser').id, c.req.valid('param').id), 200),
     )
     .post('/orders/:id/accept', zValidator('param', orderIdSchema), async (c) =>
       c.json(await deliveries.accept(c.get('authUser').id, c.req.valid('param').id), 200),
+    )
+    .post('/orders/:id/receive', zValidator('param', orderIdSchema), async (c) =>
+      c.json(await deliveries.receive(c.get('authUser').id, c.req.valid('param').id), 200),
+    )
+    .post('/orders/:id/deliver', zValidator('param', orderIdSchema), async (c) =>
+      c.json(await deliveries.deliver(c.get('authUser').id, c.req.valid('param').id), 200),
     )
     .get('/me', async (c) =>
       c.json({ user: c.get('authUser'), courier: await service.me(c.get('authUser').id) }, 200),

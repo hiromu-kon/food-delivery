@@ -32,4 +32,14 @@ export const courierOrderDetailSchema = courierOrderSummarySchema.extend({
 export const courierOrderListSchema = z.object({ orders: z.array(courierOrderSummarySchema) });
 export const courierOrderResponseSchema = z.object({ order: courierOrderDetailSchema });
 export const courierCurrentOrderSchema = z.object({ order: courierOrderDetailSchema.nullable() });
+export const courierDeliveryHistoryItemSchema = z.object({
+  id: z.uuid(),
+  storeName: z.string(),
+  total: z.number().int().nonnegative(),
+  deliveredAt: z.iso.datetime(),
+});
+export const courierDeliveryHistoryResponseSchema = z.object({
+  deliveries: z.array(courierDeliveryHistoryItemSchema),
+});
 export type CourierOrderDetail = z.infer<typeof courierOrderDetailSchema>;
+export type CourierDeliveryHistoryItem = z.infer<typeof courierDeliveryHistoryItemSchema>;

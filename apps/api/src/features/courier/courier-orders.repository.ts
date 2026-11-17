@@ -1,6 +1,6 @@
-import { couriers, orderItems, orders, stores, users, type Db } from '@repo/db';
+import { couriers, orderItems, orders, orderStatusHistory, stores, users, type Db } from '@repo/db';
 import { distanceMeters, DomainError } from '@repo/domain';
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 
 const activeStatuses = ['preparing', 'ready', 'delivering'] as const;
 const waiting = and(inArray(orders.status, ['preparing', 'ready']), isNull(orders.courierId));
@@ -134,6 +134,61 @@ export function createCourierOrdersRepository(db: Db) {
         if (active) throw new DomainError('COURIER_BUSY', '担当中の配達を確認してください');
         await tx.update(orders).set({ courierId: userId }).where(eq(orders.id, id));
         return { order: await detail(tx, userId, id) };
+      });
+    },
+    receive(userId: string, id: string) {
+      return db.transaction(async (tx) => {
+        await authorize(tx, userId);
+        const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
+        if (!order || order.courierId !== userId)
+          throw new DomainError('NOT_FOUND', '担当中の注文が見つかりません');
+        if (order.status === 'delivering') return { order: await detail(tx, userId, id) };
+        if (order.status !== 'ready')
+          throw new DomainError('ORDER_INVALID_TRANSITION', '準備完了の注文だけ受け取れます');
+        await tx.update(orders).set({ status: 'delivering' }).where(eq(orders.id, id));
+        await tx.insert(orderStatusHistory).values({ orderId: id, status: 'delivering' });
+        return { order: await detail(tx, userId, id) };
+      });
+    },
+    deliver(userId: string, id: string) {
+      return db.transaction(async (tx) => {
+        await authorize(tx, userId);
+        const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
+        if (!order || order.courierId !== userId)
+          throw new DomainError('NOT_FOUND', '担当中の注文が見つかりません');
+        if (order.status === 'delivered') return { order: await detail(tx, userId, id) };
+        if (order.status !== 'delivering')
+          throw new DomainError('ORDER_INVALID_TRANSITION', '配達中の注文だけ完了できます');
+        await tx.update(orders).set({ status: 'delivered' }).where(eq(orders.id, id));
+        await tx.insert(orderStatusHistory).values({ orderId: id, status: 'delivered' });
+        return { order: await detail(tx, userId, id) };
+      });
+    },
+    history(userId: string) {
+      return db.transaction(async (tx) => {
+        await authorize(tx, userId);
+        const rows = await tx
+          .select({
+            id: orders.id,
+            storeName: stores.name,
+            total: orders.total,
+            deliveredAt: orderStatusHistory.createdAt,
+          })
+          .from(orderStatusHistory)
+          .innerJoin(
+            orders,
+            and(
+              eq(orderStatusHistory.orderId, orders.id),
+              eq(orderStatusHistory.status, 'delivered'),
+            ),
+          )
+          .innerJoin(stores, eq(stores.id, orders.storeId))
+          .where(and(eq(orders.courierId, userId), eq(orders.status, 'delivered')))
+          .orderBy(desc(orderStatusHistory.createdAt), desc(orders.id))
+          .limit(100);
+        return {
+          deliveries: rows.map((row) => ({ ...row, deliveredAt: row.deliveredAt.toISOString() })),
+        };
       });
     },
   };
