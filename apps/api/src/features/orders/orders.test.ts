@@ -1,3 +1,4 @@
+import { checkoutActionRequiredSchema } from '@repo/contract';
 import { createHmac, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
@@ -168,7 +169,10 @@ describe('F-06 checkout, isolated PostgreSQL and injected Stripe', () => {
     const response = await post();
     expect(response.status).toBe(201);
     const body = (await response.json()) as {
-      order: NonNullable<Awaited<ReturnType<ReturnType<typeof createOrderService>['checkout']>>>;
+      order: Exclude<
+        Awaited<ReturnType<ReturnType<typeof createOrderService>['checkout']>>,
+        { clientSecret: string }
+      >;
     };
     expect(body.order).toMatchObject({
       status: 'pending',
@@ -297,11 +301,91 @@ describe('F-06 checkout, isolated PostgreSQL and injected Stripe', () => {
     expect((await post()).status).toBe(403);
     expect(stripe.create).not.toHaveBeenCalled();
   });
-  it('R-05 declines and additional authentication never create pending; cancel authorization', async () => {
+  function requireAction() {
+    stripe.confirm.mockImplementation((id) => {
+      const intent = intents.get(id)!;
+      Object.assign(intent, {
+        status: 'requires_action',
+        confirmation_method: 'automatic',
+        client_secret: `${id}_secret_synthetic`,
+      });
+      return Promise.resolve({ ...intent });
+    });
+  }
+  it('R-05 authenticates, returns no-store action, replays and reconciles one order concurrently', async () => {
+    requireAction();
+    const first = await post();
+    expect(first.status).toBe(202);
+    expect(first.headers.get('Cache-Control')).toBe('no-store');
+    const action = checkoutActionRequiredSchema.parse(await first.json());
+    expect(action.status).toBe('requires_action');
+    expect(action.clientSecret).toContain('_secret_');
+    expect(await savedCounts()).toEqual({ orders: 0, items: 0 });
+    expect((await post(input, key, '')).status).toBe(401);
+    expect((await post({ ...input, paymentMethodId: 'pm_other' })).status).toBe(409);
+    expect(await (await post()).json()).toEqual(action);
+    expect(stripe.confirm).toHaveBeenCalledOnce();
+    const intent = [...intents.values()][0]!;
+    intent.status = 'requires_capture';
+    intent.amount_capturable = intent.amount;
+    const results = await Promise.all([post(), post()]);
+    expect(results.map((response) => response.status)).toEqual([201, 201]);
+    expect(await results[0].json()).toEqual(await results[1].json());
+    expect(await savedCounts()).toEqual({ orders: 1, items: 1 });
+    expect(stripe.confirm).toHaveBeenCalledOnce();
+    expect(stripe.capture).not.toHaveBeenCalled();
+    expect(stripe.cancel).not.toHaveBeenCalled();
+  });
+  it.each(['requires_payment_method', 'canceled'])(
+    'R-05 terminal authentication %s fails without reconfirmation',
+    async (status) => {
+      requireAction();
+      expect((await post()).status).toBe(202);
+      [...intents.values()][0]!.status = status;
+      expect((await post()).status).toBe(402);
+      expect((await post()).status).toBe(402);
+      expect(await savedCounts()).toEqual({ orders: 0, items: 0 });
+      expect(stripe.confirm).toHaveBeenCalledOnce();
+    },
+  );
+  it('R-09 revalidates availability after authentication and cancels stale authorization', async () => {
+    requireAction();
+    expect((await post()).status).toBe(202);
+    const intent = [...intents.values()][0]!;
+    intent.status = 'requires_capture';
+    intent.amount_capturable = intent.amount;
+    await db.update(stores).set({ isAcceptingOrders: false }).where(eq(stores.id, input.storeId));
+    expect((await post()).status).toBe(422);
+    expect(stripe.cancel).toHaveBeenCalledOnce();
+    expect(await savedCounts()).toEqual({ orders: 0, items: 0 });
+  });
+  it('R-05 processing and mismatched secrets remain unresolved without cancel or confirmation', async () => {
+    requireAction();
+    expect((await post()).status).toBe(202);
+    const intent = [...intents.values()][0]!;
+    intent.client_secret = 'pi_other_secret_synthetic';
+    expect((await post()).status).toBe(503);
+    intent.status = 'processing';
+    expect((await post()).status).toBe(503);
+    expect(stripe.confirm).toHaveBeenCalledOnce();
+    expect(stripe.cancel).not.toHaveBeenCalled();
+    expect(await savedCounts()).toEqual({ orders: 0, items: 0 });
+  });
+  it('R-05 never confirms an old persisted intent beyond Stripe key retention', async () => {
+    requireAction();
+    expect((await post()).status).toBe(202);
+    const intent = [...intents.values()][0]!;
+    intent.status = 'requires_confirmation';
+    await db.update(checkoutAttempts).set({ createdAt: new Date(Date.now() - 24 * 3600000) });
+    expect((await post()).status).toBe(503);
+    expect(stripe.confirm).toHaveBeenCalledOnce();
+    expect(stripe.cancel).not.toHaveBeenCalled();
+  });
+  it('R-05 declines never create pending; cancel authorization', async () => {
     stripe.confirm.mockImplementation((id) =>
       Promise.resolve({
         ...intents.get(id)!,
-        status: 'requires_action',
+        status: 'requires_payment_method',
       }),
     );
     expect((await post()).status).toBe(402);
@@ -310,14 +394,17 @@ describe('F-06 checkout, isolated PostgreSQL and injected Stripe', () => {
     expect((await post()).status).toBe(402);
     expect(stripe.confirm).toHaveBeenCalledOnce();
   });
-  it('R-05 confirm network ambiguity cancels actual authorization', async () => {
+  it('R-05 confirm network ambiguity retains authorization and reconciles on retry', async () => {
     stripe.confirm.mockImplementation((id) => {
       intents.get(id)!.status = 'requires_capture';
+      intents.get(id)!.amount_capturable = intents.get(id)!.amount;
       return Promise.reject(new PaymentError('PAYMENT_UNAVAILABLE'));
     });
     expect((await post()).status).toBe(503);
     expect(await savedCounts()).toEqual({ orders: 0, items: 0 });
-    expect(stripe.cancel).toHaveBeenCalledOnce();
+    expect(stripe.cancel).not.toHaveBeenCalled();
+    expect((await post()).status).toBe(201);
+    expect(stripe.confirm).toHaveBeenCalledOnce();
   });
   it('R-05 DB insert failure rolls back and cancels authorization', async () => {
     const repository = createOrderRepository(db);

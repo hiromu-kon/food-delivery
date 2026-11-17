@@ -52,3 +52,13 @@ export function usePaymentMethod(complete: boolean) {
     return result.paymentMethod.id;
   };
 }
+
+export function useCheckoutAction() {
+  const { handleNextAction } = useStripe();
+  return async (clientSecret: string) => {
+    if (!stripeTestKey) throw new AuthRequestError('テスト決済の設定がありません。');
+    const result = await handleNextAction(clientSecret);
+    if (result.error)
+      throw new AuthRequestError('追加認証を完了できませんでした。同じ注文を再確認してください。');
+  };
+}

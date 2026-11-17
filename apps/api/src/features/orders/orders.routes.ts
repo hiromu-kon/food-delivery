@@ -54,6 +54,8 @@ export function createOrderRoutes(
             400,
           );
         const order = await service.checkout(c.get('authUser').id, key.data, c.req.valid('json'));
+        c.header('Cache-Control', 'no-store');
+        if ('clientSecret' in order) return c.json(order, 202);
         // Delivery notes and Stripe identifiers are private; do not expose them to other roles.
         return c.json({ order }, 201);
       },

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { NoticeBanner } from '@/components/ui/notice-banner';
 import { useCart } from '../cart/cart-provider';
 import { deliverySchema, orderInput, type Delivery } from './checkout-state';
-import { StripeCard, type CardPayment } from './stripe-card';
+import { StripeCard, handleCheckoutAction, type CardPayment } from './stripe-card';
 
 export function CheckoutView() {
   const { ready, cart, actions } = useCart();
@@ -32,6 +32,16 @@ export function CheckoutView() {
   const [storageError, setStorageError] = useState(false);
   const [orderId, setOrderId] = useState('');
   const busy = useRef(false);
+  const active = useRef(false);
+  const generation = useRef(0);
+  useEffect(() => {
+    const epoch = ++generation.current;
+    active.current = true;
+    return () => {
+      active.current = false;
+      generation.current = epoch + 1;
+    };
+  }, [actions.key]);
   const storageKey = `${actions.key}:checkout`;
   const [reload, setReload] = useState(0);
   useEffect(() => {
@@ -98,6 +108,8 @@ export function CheckoutView() {
         return;
       }
     }
+    const epoch = generation.current;
+    const isCurrent = () => active.current && epoch === generation.current;
     busy.current = true;
     setPending(true);
     try {
@@ -108,7 +120,12 @@ export function CheckoutView() {
         sessionStorage.setItem(storageKey, JSON.stringify(next));
         setAttempt(next);
       }
-      const order = await postOrder(env.NEXT_PUBLIC_API_URL, next);
+      const order = await postOrder(env.NEXT_PUBLIC_API_URL, next, undefined, async (secret) => {
+        if (!isCurrent()) throw new Error('同じ注文を再確認してください。');
+        await handleCheckoutAction(secret);
+        if (!isCurrent()) throw new Error('同じ注文を再確認してください。');
+      });
+      if (!isCurrent()) return;
       setOrderId(order.id);
       // Clear the submitted cart only; preserve a cart changed in another mounted view.
       const current = actions.getSnapshot().cart;
@@ -127,6 +144,7 @@ export function CheckoutView() {
       }
       setAttempt(null);
     } catch (cause) {
+      if (!isCurrent()) return;
       if (cause instanceof OrderError && !cause.retrySame) {
         try {
           sessionStorage.removeItem(storageKey);
@@ -140,7 +158,7 @@ export function CheckoutView() {
       );
     } finally {
       busy.current = false;
-      setPending(false);
+      if (isCurrent()) setPending(false);
     }
   }
   if (orderId)
@@ -360,18 +378,16 @@ export function CheckoutView() {
           </ul>
         </section>
       )}
-      {!attempt && (
-        <section aria-labelledby="payment-heading" className="space-y-3">
-          <h2 className="text-heading-m" id="payment-heading">
-            お支払い
-          </h2>
-          <StripeCard
-            publishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
-            disabled={pending}
-            onReady={setPayment}
-          />
-        </section>
-      )}
+      <section aria-labelledby="payment-heading" className="space-y-3">
+        <h2 className="text-heading-m" id="payment-heading">
+          お支払い
+        </h2>
+        <StripeCard
+          publishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+          disabled={pending || !!attempt}
+          onReady={setPayment}
+        />
+      </section>
       <div className="bg-base sticky bottom-0 z-20 space-y-2 border-t py-3">
         <Button
           className="w-full"

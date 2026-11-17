@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { checkoutActionRequiredSchema } from '@repo/contract';
+import type { AppType } from '@repo/api/app-type';
+import { hc } from 'hono/client';
 
 const attemptSchema = z.object({
   key: z.uuid(),
@@ -27,17 +30,25 @@ export class OrderError extends Error {
     super(message);
   }
 }
-export async function postOrder(apiUrl: string, attempt: OrderAttempt, request = fetch) {
+export async function postOrder(
+  apiUrl: string,
+  attempt: OrderAttempt,
+  request = fetch,
+  handleAction?: (secret: string) => Promise<void>,
+): Promise<{ id: string }> {
   let response: Response;
   try {
-    response = await request(`${apiUrl.replace(/\/$/, '')}/orders`, {
-      method: 'POST',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': attempt.key },
-      body: JSON.stringify(attempt.body),
-      signal: AbortSignal.timeout(30_000),
-    });
+    response = await hc<AppType>(apiUrl.replace(/\/$/, ''), { fetch: request }).orders.$post(
+      { json: attempt.body },
+      {
+        headers: { 'Idempotency-Key': attempt.key },
+        init: {
+          credentials: 'include',
+          cache: 'no-store',
+          signal: AbortSignal.timeout(30_000),
+        },
+      },
+    );
   } catch {
     throw new OrderError('注文結果を確認できません。同じ注文を再確認してください。', true);
   }
@@ -56,6 +67,12 @@ export async function postOrder(apiUrl: string, attempt: OrderAttempt, request =
     );
   }
   try {
+    if (response.status === 202) {
+      const action = checkoutActionRequiredSchema.parse(await response.json());
+      if (!handleAction) throw new Error();
+      await handleAction(action.clientSecret);
+      return await postOrder(apiUrl, attempt, request);
+    }
     return z.object({ order: z.object({ id: z.string().min(1) }) }).parse(await response.json())
       .order;
   } catch {

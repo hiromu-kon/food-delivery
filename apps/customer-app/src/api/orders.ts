@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  checkoutActionRequiredSchema,
   customerOrderListResponseSchema,
   customerOrderDetailResponseSchema,
   customerOrderCancellationResponseSchema,
@@ -10,18 +11,39 @@ import type { SessionController } from '@/features/auth/session';
 import type { OrderRequest } from '@/features/checkout/checkout';
 import { createApiClient } from './client';
 
-export function createOrderTransport(session: SessionController) {
-  return (request: OrderRequest, key: string) =>
+export function createOrderTransport(
+  session: SessionController,
+  handleAction?: (secret: string) => Promise<void>,
+) {
+  const submit = (
+    request: OrderRequest,
+    key: string,
+    action: typeof handleAction,
+    expectedToken?: string,
+  ): Promise<{ id: string }> =>
     session.authenticatedRequest(async (token) => {
+      if (expectedToken && token !== expectedToken)
+        throw new AuthRequestError('ログイン状態が変わりました。', 'STALE_SESSION');
       const response = await createApiClient(token).orders.$post(
         { json: request },
         { headers: { 'Idempotency-Key': key } },
       );
+      if (response.status === 202) {
+        const result = checkoutActionRequiredSchema.parse(await response.json());
+        if (!action)
+          throw new AuthRequestError('追加認証が必要です。同じ注文を再確認してください。');
+        await session.authenticatedRequest(async (currentToken) => {
+          if (currentToken !== token)
+            throw new AuthRequestError('ログイン状態が変わりました。', 'STALE_SESSION');
+          await action(result.clientSecret);
+        });
+        return submit(request, key, undefined, token);
+      }
       if (response.status !== 201) {
         const messages: Record<number, string> = {
           400: '注文内容を確認してください。',
           401: 'ログインの有効期限が切れました。',
-          402: 'カードの承認に失敗したため注文は作成されませんでした。追加認証が必要なカードには対応していません。別のテストカードで再試行してください。',
+          402: 'カードの承認に失敗したため注文は作成されませんでした。別のテストカードで再試行してください。',
           403: 'このアカウントでは注文できません。',
           404: '商品またはお届け先が見つかりません。',
           409: '注文状況を確認できません。同じ内容で再試行してください。',
@@ -36,6 +58,7 @@ export function createOrderTransport(session: SessionController) {
       return z.object({ order: z.object({ id: z.string().min(1) }) }).parse(await response.json())
         .order;
     });
+  return (request: OrderRequest, key: string) => submit(request, key, handleAction);
 }
 
 export function createOrdersTransport(session: SessionController): OrdersTransport {

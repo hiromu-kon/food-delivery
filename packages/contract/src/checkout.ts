@@ -33,3 +33,9 @@ export const checkoutSchema = z
       ctx.addIssue({ code: 'custom', path: ['items'], message: '商品が重複しています' });
   });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+export const checkoutActionRequiredSchema = z.strictObject({
+  status: z.literal('requires_action'),
+  clientSecret: z.string().regex(/^pi_[a-zA-Z0-9_]+_secret_[a-zA-Z0-9]+$/),
+});
+export type CheckoutActionRequired = z.infer<typeof checkoutActionRequiredSchema>;

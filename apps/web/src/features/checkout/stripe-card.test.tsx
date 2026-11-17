@@ -1,7 +1,13 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-import { createCardPayment, StripeCard, type CardElement, type StripeClient } from './stripe-card';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  createCardPayment,
+  handleCheckoutAction,
+  StripeCard,
+  type CardElement,
+  type StripeClient,
+} from './stripe-card';
 
 describe('Stripe card component', () => {
   it('fails closed without a test publishable key and never loads Stripe for a live key', () => {
@@ -31,4 +37,25 @@ describe('Stripe card component', () => {
       'カードを確認してください',
     );
   });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+it('R-05 uses only handleNextAction and hides SDK error details', async () => {
+  vi.stubEnv('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', 'pk_test_synthetic');
+  const handleNextAction = vi
+    .fn()
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ error: { message: 'private' } });
+  vi.stubGlobal('window', { Stripe: () => ({ handleNextAction }) });
+  await expect(handleCheckoutAction('pi_test_secret_synthetic')).resolves.toBeUndefined();
+  expect(handleNextAction).toHaveBeenCalledExactlyOnceWith({
+    clientSecret: 'pi_test_secret_synthetic',
+  });
+  await expect(handleCheckoutAction('pi_test_secret_synthetic')).rejects.toThrow('再確認');
+  vi.stubEnv('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', 'pk_live_forbidden');
+  await expect(handleCheckoutAction('pi_test_secret_synthetic')).rejects.toThrow('テスト決済');
+  expect(handleNextAction).toHaveBeenCalledTimes(2);
 });

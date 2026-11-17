@@ -1,6 +1,8 @@
 export type PaymentIntent = {
   id: string;
   status: string;
+  client_secret?: string | null | undefined;
+  confirmation_method?: string;
   amount: number;
   amount_received?: number;
   amount_capturable: number;

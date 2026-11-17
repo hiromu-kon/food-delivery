@@ -4,6 +4,8 @@ import { PaymentError, type StripeClient } from './client';
 const intentSchema = z.object({
   id: z.string().regex(/^pi_[a-zA-Z0-9_]+$/),
   status: z.string(),
+  client_secret: z.string().nullable().optional(),
+  confirmation_method: z.string(),
   amount: z.number().int(),
   amount_received: z.number().int(),
   amount_capturable: z.number().int(),
@@ -49,14 +51,15 @@ export function createStripeClient(secret?: string, fetcher: typeof fetch = fetc
           amount: String(amount),
           currency: 'jpy',
           capture_method: 'manual',
-          confirmation_method: 'manual',
+          confirmation_method: 'automatic',
           'payment_method_types[]': 'card',
           payment_method: paymentMethodId,
         },
         key,
       ),
     retrieve: (id) => request(`/${encodeURIComponent(id)}`),
-    confirm: (id, key) => request(`/${encodeURIComponent(id)}/confirm`, {}, key),
+    confirm: (id, key) =>
+      request(`/${encodeURIComponent(id)}/confirm`, { use_stripe_sdk: 'true' }, key),
     capture: (id, key) => request(`/${encodeURIComponent(id)}/capture`, {}, key),
     cancel: (id, key) => request(`/${encodeURIComponent(id)}/cancel`, {}, key),
   };

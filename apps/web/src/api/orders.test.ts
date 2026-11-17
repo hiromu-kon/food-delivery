@@ -26,10 +26,15 @@ describe('order transport and retry safety', () => {
     expect(request.mock.calls[0]?.[0]).toEqual(request.mock.calls[1]?.[0]);
     expect(request.mock.calls[0]?.[1]?.body).toEqual(request.mock.calls[1]?.[1]?.body);
     expect(request.mock.calls[0]?.[1]?.headers).toEqual(request.mock.calls[1]?.[1]?.headers);
+    expect(new Headers(request.mock.calls[0]?.[1]?.headers).get('Idempotency-Key')).toBe(
+      attempt.key,
+    );
+    expect(new Headers(request.mock.calls[0]?.[1]?.headers).get('Content-Type')).toBe(
+      'application/json',
+    );
     expect(request.mock.calls[0]?.[1]).toMatchObject({
       method: 'POST',
       credentials: 'include',
-      headers: { 'Idempotency-Key': attempt.key, 'Content-Type': 'application/json' },
       body: JSON.stringify(attempt.body),
     });
   });
@@ -60,4 +65,65 @@ describe('order transport and retry safety', () => {
     expect(() => restoreAttempt('{')).toThrow();
     expect(() => restoreAttempt(JSON.stringify({ ...attempt, key: 'bad' }))).toThrow();
   });
+});
+
+it('R-05 handles one action and retries the exact attempt before accepting an order', async () => {
+  const request = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      Response.json(
+        { status: 'requires_action', clientSecret: 'pi_test_secret_synthetic' },
+        { status: 202 },
+      ),
+    )
+    .mockResolvedValueOnce(Response.json({ order: { id: 'order' } }, { status: 201 }));
+  const action = vi.fn().mockResolvedValue(undefined);
+  await expect(postOrder('https://api.example', attempt, request, action)).resolves.toEqual({
+    id: 'order',
+  });
+  expect(action).toHaveBeenCalledExactlyOnceWith('pi_test_secret_synthetic');
+  expect(request.mock.calls[0]?.[1]?.body).toEqual(request.mock.calls[1]?.[1]?.body);
+  expect(new Headers(request.mock.calls[1]?.[1]?.headers).get('Idempotency-Key')).toBe(attempt.key);
+});
+it('R-05 cancellation and repeated action retain the attempt without looping or reporting success', async () => {
+  for (const action of [
+    vi.fn().mockRejectedValue(new Error('canceled')),
+    vi.fn().mockResolvedValue(undefined),
+  ]) {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() =>
+        Promise.resolve(
+          Response.json(
+            { status: 'requires_action', clientSecret: 'pi_test_secret_synthetic' },
+            { status: 202 },
+          ),
+        ),
+      );
+    await expect(postOrder('https://api.example', attempt, request, action)).rejects.toMatchObject({
+      retrySame: true,
+    });
+    expect(action).toHaveBeenCalledOnce();
+    expect(request.mock.calls.length).toBeLessThanOrEqual(2);
+  }
+});
+it('rejects malformed action contracts before invoking the SDK', async () => {
+  const { checkoutActionRequiredSchema } = await import('@repo/contract');
+  for (const value of [
+    { status: 'requires_action', clientSecret: 'bad' },
+    { status: 'requires_capture', clientSecret: 'pi_test_secret_synthetic' },
+    { status: 'requires_action', clientSecret: 'pi_test_secret_synthetic', card: 'private' },
+  ]) {
+    expect(checkoutActionRequiredSchema.safeParse(value).success).toBe(false);
+    const action = vi.fn();
+    await expect(
+      postOrder(
+        'https://api.example',
+        attempt,
+        vi.fn().mockResolvedValue(Response.json(value, { status: 202 })),
+        action,
+      ),
+    ).rejects.toMatchObject({ retrySame: true });
+    expect(action).not.toHaveBeenCalled();
+  }
 });

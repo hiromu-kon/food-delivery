@@ -1,5 +1,6 @@
 import type { DeliveryPhotoStorage } from '../../integrations/delivery-photos/storage';
 import {
+  checkoutActionRequiredSchema,
   customerOrderCancellationResponseSchema,
   customerOrderDetailSchema,
   customerOrderSummarySchema,
@@ -128,8 +129,39 @@ export function createOrderService(
               '注文内容が変わりました。確認して再注文してください',
             );
           let intent = await stripe.retrieve(id);
+          if (
+            intent.id !== id ||
+            intent.capture_method !== 'manual' ||
+            intent.currency !== 'jpy' ||
+            intent.amount !== quote.total
+          )
+            throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+          if (
+            intent.status === 'requires_confirmation' &&
+            Date.now() - attempt.createdAt.getTime() > 23 * 3600000
+          )
+            throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
           if (intent.status === 'requires_confirmation')
             intent = await stripe.confirm(id, `${attempt.id}:confirm`);
+          if (intent.id !== id) throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+          if (intent.status === 'requires_action') {
+            const action = checkoutActionRequiredSchema.safeParse({
+              status: 'requires_action',
+              clientSecret: intent.client_secret,
+            });
+            if (
+              !action.success ||
+              intent.confirmation_method !== 'automatic' ||
+              !action.data.clientSecret.startsWith(`${id}_secret_`) ||
+              intent.capture_method !== 'manual' ||
+              intent.currency !== 'jpy' ||
+              intent.amount !== quote.total
+            )
+              throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
+            return action.data;
+          }
+          if (intent.status === 'processing')
+            throw new PaymentError('PAYMENT_RECONCILIATION_REQUIRED');
           if (
             intent.status !== 'requires_capture' ||
             intent.capture_method !== 'manual' ||
@@ -141,6 +173,7 @@ export function createOrderService(
           return repository.insert(tx, attempt.id, userId, id, quote);
         });
       } catch (error) {
+        if (error instanceof PaymentError && error.code !== 'PAYMENT_FAILED') throw error;
         // Serialize compensation against retries, and resolve ambiguous COMMIT before canceling.
         try {
           const committed = await repository.transaction(async (tx) => {
@@ -150,6 +183,20 @@ export function createOrderService(
             await repository.fail(tx, attempt.id);
             try {
               const intent = await stripe.retrieve(id);
+              if (
+                intent.id !== id ||
+                intent.capture_method !== 'manual' ||
+                intent.currency !== 'jpy' ||
+                intent.amount !== attempt.quote.total ||
+                ![
+                  'canceled',
+                  'requires_action',
+                  'requires_confirmation',
+                  'requires_payment_method',
+                  'requires_capture',
+                ].includes(intent.status)
+              )
+                return { cleanupFailed: true } as const;
               if (intent.status !== 'canceled') {
                 const canceled = await stripe.cancel(id, `${attempt.id}:cancel`);
                 if (canceled.status !== 'canceled') return { cleanupFailed: true } as const;

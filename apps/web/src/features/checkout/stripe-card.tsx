@@ -13,6 +13,7 @@ export type CardElement = {
   update(options: { disabled: boolean }): void;
 };
 export type StripeClient = {
+  handleNextAction(options: { clientSecret: string }): Promise<{ error?: { message?: string } }>;
   elements(options: { locale: 'ja' }): { create(type: 'card', options: object): CardElement };
   createPaymentMethod(options: { type: 'card'; card: CardElement }): Promise<{
     paymentMethod?: { id: string };
@@ -133,4 +134,13 @@ export function StripeCard({
       </p>
     </div>
   );
+}
+
+export async function handleCheckoutAction(clientSecret: string) {
+  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  if (!key?.startsWith('pk_test_') || !window.Stripe)
+    throw new Error('テスト決済を読み込んでください。');
+  const result = await window.Stripe(key).handleNextAction({ clientSecret });
+  if (result.error)
+    throw new Error('追加認証を完了できませんでした。同じ注文を再確認してください。');
 }

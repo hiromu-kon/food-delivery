@@ -92,6 +92,9 @@ export class CheckoutController {
   setPaymentMethod = (paymentMethod: CheckoutDependencies['paymentMethod']) => {
     this.dependencies.paymentMethod = paymentMethod;
   };
+  setSubmit = (submit: CheckoutDependencies['submit']) => {
+    this.dependencies.submit = submit;
+  };
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);

@@ -1,8 +1,8 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { PaymentCard, PaymentProvider, usePaymentMethod } from './payment';
-const sdk = vi.hoisted(() => ({ createPaymentMethod: vi.fn() }));
+import { PaymentCard, PaymentProvider, usePaymentMethod, useCheckoutAction } from './payment';
+const sdk = vi.hoisted(() => ({ createPaymentMethod: vi.fn(), handleNextAction: vi.fn() }));
 vi.mock('@stripe/stripe-react-native', () => ({
   CardField: (props: object) => React.createElement('native-card-field', props),
   StripeProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -49,5 +49,25 @@ it('returns only paymentMethodId and handles incomplete and failed native SDK re
   sdk.createPaymentMethod.mockResolvedValueOnce({ paymentMethod: { id: 'pm_native' } });
   await expect(tokenize()).resolves.toBe('pm_native');
   expect(sdk.createPaymentMethod).toHaveBeenLastCalledWith({ paymentMethodType: 'Card' });
+  await act(() => renderer.unmount());
+});
+
+it('R-05 uses native handleNextAction and keeps cancellation retryable without confirming', async () => {
+  let action!: (secret: string) => Promise<void>;
+  function Harness() {
+    action = useCheckoutAction();
+    return null;
+  }
+  let renderer!: ReactTestRenderer;
+  await act(() => {
+    renderer = create(<Harness />);
+  });
+  sdk.handleNextAction
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ error: { code: 'Canceled' } });
+  await expect(action('pi_test_secret_synthetic')).resolves.toBeUndefined();
+  expect(sdk.handleNextAction).toHaveBeenCalledWith('pi_test_secret_synthetic');
+  await expect(action('pi_test_secret_synthetic')).rejects.toMatchObject({ status: 0 });
+  expect(sdk.createPaymentMethod).not.toHaveBeenCalled();
   await act(() => renderer.unmount());
 });

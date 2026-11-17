@@ -132,6 +132,7 @@ beforeEach(async () => {
 
 async function storeFixture() {
   const order = await createOrderService(db, stripe).checkout(userId, key, input);
+  if ('clientSecret' in order) throw new Error('Unexpected action required');
   await db.update(orders).set({ createdAt: order.createdAt }).where(eq(orders.id, order.id));
   const staffId = randomUUID();
   await db.insert(users).values({
@@ -265,6 +266,7 @@ it('R-06 does not void inconsistent or captured payments and continues with othe
   const { order } = await storeFixture();
   key = randomUUID();
   const second = await createOrderService(db, stripe).checkout(userId, key, input);
+  if ('clientSecret' in second) throw new Error('Unexpected action required');
   await db.update(orders).set({ createdAt: second.createdAt }).where(eq(orders.id, second.id));
   intents.get(order.paymentIntentId)!.currency = 'usd';
   const deadline = new Date(
