@@ -1,4 +1,6 @@
 import {
+  deliveryPhotoUploadSchema,
+  type DeliveryPhotoUpload,
   courierAvailabilitySchema,
   courierDeliveryHistoryResponseSchema,
   courierMeSchema,
@@ -81,5 +83,21 @@ export function deliveryHistory(controller: SessionController) {
     const response = await createApiClient(token).courier.orders.history.$get();
     await assertAuthSuccess(response);
     return courierDeliveryHistoryResponseSchema.parse(await response.json());
+  });
+}
+
+export function uploadDeliveryPhoto(
+  controller: SessionController,
+  id: string,
+  photo: DeliveryPhotoUpload,
+) {
+  const json = deliveryPhotoUploadSchema.parse(photo);
+  return controller.authenticatedRequest(async (token) => {
+    const response = await createApiClient(token).courier.orders[':id'].photo.$post({
+      param: { id },
+      json,
+    });
+    await assertAuthSuccess(response);
+    return courierOrderResponseSchema.parse(await response.json());
   });
 }

@@ -1,3 +1,4 @@
+import { createPostgresDeliveryPhotoStorage } from './integrations/delivery-photos/postgres';
 import { serve } from '@hono/node-server';
 
 import { getConnInfo } from '@hono/node-server/conninfo';
@@ -31,7 +32,10 @@ const email = createSmtpSender({
 });
 const auth = createAuthService(db, email, config);
 const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
+const deliveryPhotos =
+  env.DELIVERY_PHOTO_STORAGE === 'postgres' ? createPostgresDeliveryPhotoStorage(db) : undefined;
 const app = createApp({
+  deliveryPhotos,
   auth,
   stripe,
   db,
@@ -53,4 +57,13 @@ startOrderExpiryJob(
   () => {
     console.error('注文期限切れ取消の未確認処理があります。次回実行で再照合します');
   },
+);
+
+const photoRetention = createPostgresDeliveryPhotoStorage(db);
+startOrderExpiryJob(
+  async () => {
+    await photoRetention.purge(new Date());
+    return { failed: 0 };
+  },
+  () => console.error('置き配写真の期限切れ削除に失敗しました。次回実行で再試行します'),
 );

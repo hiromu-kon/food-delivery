@@ -1,6 +1,10 @@
+import sharp from 'sharp';
+import { deliveryPhotos } from '@repo/db';
+import { createPostgresDeliveryPhotoStorage } from '../../integrations/delivery-photos/postgres';
 import { createHmac, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
+  customerOrderDetailResponseSchema,
   courierDeliveryHistoryResponseSchema,
   courierOrderListSchema,
   courierOrderResponseSchema,
@@ -34,7 +38,14 @@ const config = {
   secureCookies: false,
 };
 const auth = createAuthService(db, { send: async () => {} }, config);
-const app = createApp({ auth, db, config, getClientIp: () => '203.0.113.63' });
+const photoStorage = createPostgresDeliveryPhotoStorage(db);
+const app = createApp({
+  auth,
+  db,
+  config,
+  deliveryPhotos: photoStorage,
+  getClientIp: () => '203.0.113.63',
+});
 const userIds: string[] = [];
 let storeId: string;
 let customerId: string;
@@ -279,7 +290,7 @@ describe('F-15 受け取り・配達完了・履歴（実PostgreSQL、決済な�
     expect((await deliver(b, ready)).status).toBe(409);
   });
 
-  it('置き配は写真の保存が使えるまで配達完了にできない', async () => {
+  it('R-15 置き配は写真の送信前に配達完了にできない', async () => {
     const id = await order('ready');
     await accept(a, id);
     await receive(a, id);
@@ -319,4 +330,266 @@ describe('F-15 受け取り・配達完了・履歴（実PostgreSQL、決済な�
     });
     expect(await (await request(b, '/history')).json()).toEqual({ deliveries: [] });
   });
+});
+
+async function jpeg() {
+  return {
+    mimeType: 'image/jpeg',
+    base64: (
+      await sharp({ create: { width: 16, height: 12, channels: 3, background: '#aa5522' } })
+        .jpeg()
+        .toBuffer()
+    ).toString('base64'),
+  };
+}
+async function upload(actor: typeof a, id: string, body: unknown, target = app) {
+  return target.request(`/courier/orders/${id}/photo`, {
+    method: 'POST',
+    headers: { authorization: actor.authorization, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+async function customerHeaders(id = customerId) {
+  const token = randomUUID();
+  await db
+    .insert(sessions)
+    .values({ id: randomUUID(), userId: id, token, expiresAt: new Date(Date.now() + 3600000) });
+  return {
+    authorization: `Bearer ${token}.${createHmac('sha256', config.secret).update(token).digest('base64')}`,
+  };
+}
+async function assigned() {
+  const id = await order();
+  await accept(a, id);
+  await receive(a, id);
+  return id;
+}
+describe('F-15 置き配写真（実DBストレージ、外部決済なし）', () => {
+  it('R-15 写真送信・再送・完了・注文者表示・30日後の非表示と物理削除', async () => {
+    const id = await assigned();
+    const headers = await customerHeaders();
+    expect((await upload(a, id, await jpeg())).status).toBe(200);
+    expect((await upload(a, id, await jpeg())).status).toBe(200);
+    expect(await (await request(a, `/${id}`)).json()).toHaveProperty(
+      'order.hasDeliveryPhoto',
+      true,
+    );
+    const pending = await app.request(`/orders/${id}`, { headers });
+    expect(await pending.json()).toHaveProperty('order.deliveryPhotoUrl', null);
+    await db
+      .update(deliveryPhotos)
+      .set({ expiresAt: new Date(Date.now() + 86400000) })
+      .where(eq(deliveryPhotos.orderId, id));
+    await photoStorage.purge(new Date());
+    expect((await deliver(a, id)).status).toBe(200);
+    const [saved] = await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id));
+    expect(saved!.expiresAt.getTime() - Date.now()).toBeGreaterThan(30 * 86400000 - 5000);
+    expect((await deliver(a, id)).status).toBe(200);
+    expect(
+      (await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id)))[0]!.expiresAt,
+    ).toEqual(saved!.expiresAt);
+    expect((await upload(a, id, await jpeg())).status).toBe(409);
+    const detail = await app.request(`/orders/${id}`, { headers });
+    expect(detail.headers.get('cache-control')).toContain('no-store');
+    const body = customerOrderDetailResponseSchema.parse(await detail.json());
+    expect(body.order.deliveryPhotoUrl).toMatch(/^data:image\/jpeg;base64,/);
+    expect(body.order).not.toHaveProperty('courierId');
+    const other = await customerHeaders(await user('customer'));
+    expect((await app.request(`/orders/${id}`, { headers: other })).status).toBe(404);
+    expect((await app.request(`/orders/${id}`)).status).toBe(401);
+    expect(
+      (await app.request(`/orders/${id}`, { headers: { authorization: b.authorization } })).status,
+    ).toBe(403);
+    const deadline = new Date(Date.now() - 1);
+    await db
+      .update(deliveryPhotos)
+      .set({ expiresAt: deadline })
+      .where(eq(deliveryPhotos.orderId, id));
+    expect(await (await app.request(`/orders/${id}`, { headers })).json()).toHaveProperty(
+      'order.deliveryPhotoUrl',
+      null,
+    );
+    await photoStorage.purge(deadline);
+    expect(await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id))).toEqual(
+      [],
+    );
+    await photoStorage.purge(deadline);
+  });
+  it('R-15 担当外・権限変更・未認証・不正Origin・手渡し・不正状態を拒否する', async () => {
+    const id = await assigned();
+    const body = await jpeg();
+    expect((await upload(b, id, body)).status).toBe(404);
+    expect((await upload(a, randomUUID(), body)).status).toBe(404);
+    expect(
+      (
+        await app.request(`/courier/orders/${id}/photo`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await app.request(`/courier/orders/${id}/photo`, {
+          method: 'POST',
+          headers: {
+            cookie: `better-auth.session_token=${encodeURIComponent(a.authorization.slice(7))}`,
+            origin: 'http://evil.example.test',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        })
+      ).status,
+    ).toBe(403);
+    await db.update(users).set({ disabled: true }).where(eq(users.id, a.id));
+    expect((await upload(a, id, body)).status).toBe(403);
+    await db.update(users).set({ disabled: false }).where(eq(users.id, a.id));
+    await db
+      .update(orders)
+      .set({ fulfillment: 'hand_delivery', dropoffLocation: null })
+      .where(eq(orders.id, id));
+    expect((await upload(a, id, body)).status).toBe(409);
+    expect((await deliver(a, id)).status).toBe(200);
+  });
+  it('R-15 MIME・サイズ・破損画像・異なる実形式を検証する', async () => {
+    const id = await assigned();
+    expect((await upload(a, id, { ...(await jpeg()), mimeType: 'image/png' })).status).toBe(400);
+    expect((await upload(a, id, { mimeType: 'image/jpeg', base64: 'invalid' })).status).toBe(400);
+    expect(
+      (
+        await upload(a, id, {
+          mimeType: 'image/jpeg',
+          base64: Buffer.from('not an image').toString('base64'),
+        })
+      ).status,
+    ).toBe(422);
+    const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#ffffff' } })
+      .png()
+      .toBuffer();
+    expect(
+      (await upload(a, id, { mimeType: 'image/jpeg', base64: png.toString('base64') })).status,
+    ).toBe(422);
+    expect(
+      (await upload(a, id, { mimeType: 'image/jpeg', base64: 'A'.repeat(2800000) })).status,
+    ).toBe(413);
+    expect((await deliver(a, id)).status).toBe(409);
+  });
+  it('R-15 保存未設定と保存失敗は成功にせず、DB書込みもロールバックする', async () => {
+    const id = await assigned();
+    const disabled = createApp({ auth, db, config, getClientIp: () => undefined });
+    expect((await upload(a, id, await jpeg(), disabled)).status).toBe(503);
+    expect(
+      (
+        await disabled.request(`/courier/orders/${id}/deliver`, {
+          method: 'POST',
+          headers: { authorization: a.authorization },
+        })
+      ).status,
+    ).toBe(503);
+    const failing = createApp({
+      auth,
+      db,
+      config,
+      getClientIp: () => undefined,
+      deliveryPhotos: {
+        ...photoStorage,
+        async put(tx, photo) {
+          await photoStorage.put(tx, photo);
+          throw new Error('Injected storage failure');
+        },
+      },
+    });
+    expect((await upload(a, id, await jpeg(), failing)).status).toBe(500);
+    expect(await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id))).toEqual(
+      [],
+    );
+    expect((await deliver(a, id)).status).toBe(409);
+    expect((await upload(a, id, await jpeg())).status).toBe(200);
+  });
+  it('R-15 前任者と期限切れの写真を完了の根拠にしない', async () => {
+    const id = await assigned();
+    await upload(a, id, await jpeg());
+    await db.update(orders).set({ courierId: b.id }).where(eq(orders.id, id));
+    expect((await deliver(b, id)).status).toBe(409);
+    await upload(b, id, await jpeg());
+    await db
+      .update(deliveryPhotos)
+      .set({ expiresAt: new Date(Date.now() - 1) })
+      .where(eq(deliveryPhotos.orderId, id));
+    expect((await deliver(b, id)).status).toBe(409);
+    await photoStorage.purge(new Date());
+    expect(await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id))).toEqual(
+      [],
+    );
+  });
+  it('R-15 写真送信と完了の競合でも写真がない完了を作らず、履歴を重複させない', async () => {
+    const id = await assigned();
+    const results = await Promise.all([upload(a, id, await jpeg()), deliver(a, id)]);
+    expect(results[0].status).toBe(200);
+    expect([200, 409]).toContain(results[1].status);
+    expect((await deliver(a, id)).status).toBe(200);
+    expect(
+      (await db.select().from(orderStatusHistory).where(eq(orderStatusHistory.orderId, id))).filter(
+        (row) => row.status === 'delivered',
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+it('R-15 JPEGを再エンコードしてメタデータを取り除く', async () => {
+  const id = await assigned();
+  const original = await sharp({
+    create: { width: 8, height: 8, channels: 3, background: '#ffffff' },
+  })
+    .jpeg()
+    .withExif({ IFD0: { ImageDescription: 'private synthetic metadata' } })
+    .toBuffer();
+  expect((await sharp(original).metadata()).exif).toBeDefined();
+  expect(
+    (await upload(a, id, { mimeType: 'image/jpeg', base64: original.toString('base64') })).status,
+  ).toBe(200);
+  const [photo] = await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id));
+  expect((await sharp(Buffer.from(photo!.base64, 'base64')).metadata()).exif).toBeUndefined();
+});
+it('R-15 保存境界が完了途中に失敗すると状態と期限を戻し、手渡しは未設定でも完了する', async () => {
+  const id = await assigned();
+  await upload(a, id, await jpeg());
+  const [before] = await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id));
+  const failing = createApp({
+    auth,
+    db,
+    config,
+    getClientIp: () => undefined,
+    deliveryPhotos: {
+      ...photoStorage,
+      async complete(tx, orderId, expiresAt) {
+        await photoStorage.complete(tx, orderId, expiresAt);
+        throw new Error('Injected completion failure');
+      },
+    },
+  });
+  expect(
+    (
+      await failing.request(`/courier/orders/${id}/deliver`, {
+        method: 'POST',
+        headers: { authorization: a.authorization },
+      })
+    ).status,
+  ).toBe(500);
+  expect((await db.select().from(orders).where(eq(orders.id, id)))[0]!.status).toBe('delivering');
+  expect(
+    (await db.select().from(deliveryPhotos).where(eq(deliveryPhotos.orderId, id)))[0]!.expiresAt,
+  ).toEqual(before!.expiresAt);
+  const hand = await order('delivering', 'hand_delivery');
+  await db.update(orders).set({ courierId: b.id }).where(eq(orders.id, hand));
+  const disabled = createApp({ auth, db, config, getClientIp: () => undefined });
+  expect(
+    (
+      await disabled.request(`/courier/orders/${hand}/deliver`, {
+        method: 'POST',
+        headers: { authorization: b.authorization },
+      })
+    ).status,
+  ).toBe(200);
 });

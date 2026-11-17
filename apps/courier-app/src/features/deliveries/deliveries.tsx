@@ -1,3 +1,4 @@
+import { DeliveryCamera } from './delivery-camera';
 import type { CourierOrderDetail } from '@repo/contract';
 import { Button } from '@repo/native-ui/button';
 import { Text } from '@repo/native-ui/text';
@@ -5,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
 
 import {
+  uploadDeliveryPhoto,
   acceptDelivery,
   completeDelivery,
   currentDelivery,
@@ -151,14 +153,26 @@ export function Deliveries({
                 </Button>
               ) : null}
               {selected.status === 'delivering' && selected.fulfillment === 'leave_at_door' ? (
-                <Text accessibilityRole="alert" className="text-danger">
-                  置き配写真の保存に対応するまで配達完了にはできません。
-                </Text>
+                <View className="gap-3">
+                  {selected.hasDeliveryPhoto ? (
+                    <Text>写真の送信を確認しました。配達完了にできます。</Text>
+                  ) : null}
+                  <DeliveryCamera
+                    key={selected.id}
+                    busy={busy}
+                    onUpload={(photo) =>
+                      run(
+                        async () =>
+                          (await uploadDeliveryPhoto(controller, selected.id, photo)).order,
+                      )
+                    }
+                  />
+                </View>
               ) : null}
               {selected.status === 'delivering' ? (
                 <Button
                   loading={busy}
-                  disabled={selected.fulfillment === 'leave_at_door'}
+                  disabled={selected.fulfillment === 'leave_at_door' && !selected.hasDeliveryPhoto}
                   onPress={() =>
                     void run(async () => {
                       await completeDelivery(controller, selected.id);

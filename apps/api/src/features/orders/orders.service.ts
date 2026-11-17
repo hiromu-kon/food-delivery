@@ -1,3 +1,4 @@
+import type { DeliveryPhotoStorage } from '../../integrations/delivery-photos/storage';
 import {
   customerOrderCancellationResponseSchema,
   customerOrderDetailSchema,
@@ -25,6 +26,7 @@ export function createOrderService(
   db: Db,
   stripe: StripeClient,
   repository = createOrderRepository(db),
+  photos?: DeliveryPhotoStorage,
 ) {
   return {
     async cancel(userId: string, id: string) {
@@ -72,10 +74,17 @@ export function createOrderService(
     async get(userId: string, id: string) {
       const order = await repository.detailForCustomer(userId, id);
       if (!order) throw new DomainError('NOT_FOUND', '注文が見つかりません');
+      const courierId = order.courierId;
+      const photo =
+        order.status === 'delivered' && order.fulfillment === 'leave_at_door' && courierId
+          ? await db.transaction(
+              (tx) => photos?.get(tx, id, courierId, new Date()) ?? Promise.resolve(undefined),
+            )
+          : undefined;
       return customerOrderDetailSchema.parse({
         ...order,
         createdAt: order.createdAt.toISOString(),
-        deliveryPhotoUrl: null,
+        deliveryPhotoUrl: photo ? `data:image/jpeg;base64,${photo.base64}` : null,
       });
     },
     async checkout(userId: string, key: string, raw: CheckoutInput) {

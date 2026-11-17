@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { sessionTransport } from './auth';
 import {
+  uploadDeliveryPhoto,
   getCourier,
   setAvailability,
   listDeliveries,
@@ -187,4 +188,31 @@ it('受け取り・配達完了・自分の配達履歴を型付き API で取�
   );
   expect((await deliveryHistory(controller)).deliveries[0]?.id).toBe(delivery.id);
   expect(nativeFetch.mock.calls.at(-1)?.[0]).toBe('http://api.example.test/courier/orders/history');
+});
+
+it('R-15 写真を署名Bearerで送信し、保存済み応答だけを成功とする', async () => {
+  const { controller, nativeFetch } = await deliveryController();
+  const photo = { mimeType: 'image/jpeg' as const, base64: '/9j/2Q==' };
+  nativeFetch.mockResolvedValueOnce(
+    new Response(JSON.stringify({ order: { ...delivery, hasDeliveryPhoto: true } })),
+  );
+  expect((await uploadDeliveryPhoto(controller, delivery.id, photo)).order.hasDeliveryPhoto).toBe(
+    true,
+  );
+  const [url, init] = nativeFetch.mock.calls.at(-1)!;
+  expect(url).toBe(`http://api.example.test/courier/orders/${delivery.id}/photo`);
+  expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed');
+  expect(init?.body).toBe(JSON.stringify(photo));
+  nativeFetch.mockResolvedValueOnce(
+    new Response(
+      '{"code":"DELIVERY_PHOTO_UNAVAILABLE","message":"写真保存が未設定です。運営に連絡してください"}',
+      { status: 503 },
+    ),
+  );
+  await expect(uploadDeliveryPhoto(controller, delivery.id, photo)).rejects.toMatchObject({
+    code: 'DELIVERY_PHOTO_UNAVAILABLE',
+    status: 503,
+  });
+  nativeFetch.mockResolvedValueOnce(new Response('{"order":{}}'));
+  await expect(uploadDeliveryPhoto(controller, delivery.id, photo)).rejects.toThrow();
 });

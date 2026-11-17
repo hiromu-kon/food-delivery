@@ -1,5 +1,8 @@
+import type { DeliveryPhotoStorage } from '../../integrations/delivery-photos/storage';
+import type { DeliveryPhotoUpload } from '@repo/contract';
+import { normalizeDeliveryPhoto } from '../../integrations/delivery-photos/validate';
 import { couriers, orderItems, orders, orderStatusHistory, stores, users, type Db } from '@repo/db';
-import { distanceMeters, DomainError } from '@repo/domain';
+import { deliveryPhotoExpiresAt, distanceMeters, DomainError } from '@repo/domain';
 import { and, asc, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 
 const activeStatuses = ['preparing', 'ready', 'delivering'] as const;
@@ -19,7 +22,7 @@ async function authorize(tx: Tx, userId: string) {
   return courier;
 }
 
-async function detail(tx: Tx, userId: string, id: string) {
+async function detail(tx: Tx, userId: string, id: string, photos?: DeliveryPhotoStorage) {
   const [row] = await tx
     .select({
       id: orders.id,
@@ -61,6 +64,7 @@ async function detail(tx: Tx, userId: string, id: string) {
       { latitude, longitude },
     ),
     isAssignedToMe: courierId === userId,
+    hasDeliveryPhoto: courierId === userId && !!(await photos?.get(tx, id, userId, new Date())),
     ...(courierId === userId && { customerPhoneNumber }),
     ...(courierId === userId && { deliveryNote }),
     items: await tx
@@ -76,7 +80,7 @@ async function detail(tx: Tx, userId: string, id: string) {
   };
 }
 
-export function createCourierOrdersRepository(db: Db) {
+export function createCourierOrdersRepository(db: Db, photos?: DeliveryPhotoStorage) {
   return {
     list(userId: string) {
       return db.transaction(async (tx) => {
@@ -114,13 +118,13 @@ export function createCourierOrdersRepository(db: Db) {
           .select({ id: orders.id })
           .from(orders)
           .where(and(eq(orders.courierId, userId), inArray(orders.status, activeStatuses)));
-        return { order: order ? await detail(tx, userId, order.id) : null };
+        return { order: order ? await detail(tx, userId, order.id, photos) : null };
       });
     },
     detail(userId: string, id: string) {
       return db.transaction(async (tx) => {
         await authorize(tx, userId);
-        return { order: await detail(tx, userId, id) };
+        return { order: await detail(tx, userId, id, photos) };
       });
     },
     accept(userId: string, id: string) {
@@ -130,7 +134,7 @@ export function createCourierOrdersRepository(db: Db) {
         if (!order)
           throw new DomainError('NOT_FOUND', '注文が見つかりません。一覧を更新してください');
         if (order.courierId === userId && activeStatuses.some((status) => status === order.status))
-          return { order: await detail(tx, userId, id) };
+          return { order: await detail(tx, userId, id, photos) };
         if (order.courierId || (order.status !== 'preparing' && order.status !== 'ready'))
           throw new DomainError(
             'ORDER_ALREADY_ASSIGNED',
@@ -144,7 +148,7 @@ export function createCourierOrdersRepository(db: Db) {
           .where(and(eq(orders.courierId, userId), inArray(orders.status, activeStatuses)));
         if (active) throw new DomainError('COURIER_BUSY', '担当中の配達を確認してください');
         await tx.update(orders).set({ courierId: userId }).where(eq(orders.id, id));
-        return { order: await detail(tx, userId, id) };
+        return { order: await detail(tx, userId, id, photos) };
       });
     },
     receive(userId: string, id: string) {
@@ -153,12 +157,12 @@ export function createCourierOrdersRepository(db: Db) {
         const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
         if (!order || order.courierId !== userId)
           throw new DomainError('NOT_FOUND', '担当中の注文が見つかりません');
-        if (order.status === 'delivering') return { order: await detail(tx, userId, id) };
+        if (order.status === 'delivering') return { order: await detail(tx, userId, id, photos) };
         if (order.status !== 'ready')
           throw new DomainError('ORDER_INVALID_TRANSITION', '準備完了の注文だけ受け取れます');
         await tx.update(orders).set({ status: 'delivering' }).where(eq(orders.id, id));
         await tx.insert(orderStatusHistory).values({ orderId: id, status: 'delivering' });
-        return { order: await detail(tx, userId, id) };
+        return { order: await detail(tx, userId, id, photos) };
       });
     },
     deliver(userId: string, id: string) {
@@ -167,17 +171,48 @@ export function createCourierOrdersRepository(db: Db) {
         const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
         if (!order || order.courierId !== userId)
           throw new DomainError('NOT_FOUND', '担当中の注文が見つかりません');
-        if (order.status === 'delivered') return { order: await detail(tx, userId, id) };
+        if (order.status === 'delivered') return { order: await detail(tx, userId, id, photos) };
         if (order.status !== 'delivering')
           throw new DomainError('ORDER_INVALID_TRANSITION', '配達中の注文だけ完了できます');
-        if (order.fulfillment === 'leave_at_door')
-          throw new DomainError(
-            'DELIVERY_PHOTO_REQUIRED',
-            '置き配写真の保存が利用できるまで配達完了にできません',
-          );
+        if (order.fulfillment === 'leave_at_door') {
+          if (!photos)
+            throw new DomainError(
+              'DELIVERY_PHOTO_UNAVAILABLE',
+              '写真保存が未設定です。運営に連絡してください',
+            );
+          if (!(await photos.get(tx, id, userId, new Date())))
+            throw new DomainError(
+              'DELIVERY_PHOTO_REQUIRED',
+              '置いた場所の写真を撮影・送信してください',
+            );
+          await photos.complete(tx, id, deliveryPhotoExpiresAt(new Date()));
+        }
         await tx.update(orders).set({ status: 'delivered' }).where(eq(orders.id, id));
         await tx.insert(orderStatusHistory).values({ orderId: id, status: 'delivered' });
-        return { order: await detail(tx, userId, id) };
+        return { order: await detail(tx, userId, id, photos) };
+      });
+    },
+    uploadPhoto(userId: string, id: string, photo: DeliveryPhotoUpload) {
+      return db.transaction(async (tx) => {
+        await authorize(tx, userId);
+        const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
+        if (!order || order.courierId !== userId)
+          throw new DomainError('NOT_FOUND', '担当中の注文が見つかりません');
+        if (order.status !== 'delivering' || order.fulfillment !== 'leave_at_door')
+          throw new DomainError('ORDER_INVALID_TRANSITION', '配達中の置き配だけ写真を送信できます');
+        if (!photos)
+          throw new DomainError(
+            'DELIVERY_PHOTO_UNAVAILABLE',
+            '写真保存が未設定です。運営に連絡してください',
+          );
+        const base64 = await normalizeDeliveryPhoto(photo);
+        await photos.put(tx, {
+          orderId: id,
+          courierId: userId,
+          base64,
+          expiresAt: deliveryPhotoExpiresAt(new Date()),
+        });
+        return { order: await detail(tx, userId, id, photos) };
       });
     },
     history(userId: string) {
