@@ -1,7 +1,14 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { sessionTransport } from './auth';
-import { getCourier, setAvailability } from './courier';
+import {
+  getCourier,
+  setAvailability,
+  listDeliveries,
+  currentDelivery,
+  deliveryDetail,
+  acceptDelivery,
+} from './courier';
 import { SessionController } from '../features/auth/session';
 
 const user = {
@@ -69,4 +76,75 @@ it('本人の取得と稼働値の指定を型付きクライアントで送り�
   await expect(setAvailability(controller, false)).rejects.toMatchObject({ status: 403 });
   expect(clear).toHaveBeenCalledOnce();
   expect(controller.getSnapshot().status).toBe('anonymous');
+});
+
+const delivery = {
+  id: '00000000-0000-4000-8000-000000000063',
+  status: 'ready',
+  storeName: '架空店舗',
+  distanceMeters: 111,
+  storeAddress: '店舗住所',
+  address: 'お届け先',
+  building: '101',
+  items: [
+    {
+      menuItemId: '00000000-0000-4000-8000-000000000064',
+      name: 'カレー',
+      unitPrice: 700,
+      quantity: 1,
+    },
+  ],
+  fulfillment: 'hand_delivery',
+  dropoffLocation: null,
+  isAssignedToMe: false,
+};
+async function deliveryController() {
+  const nativeFetch = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(new Response(JSON.stringify(profile)));
+  vi.stubGlobal('fetch', nativeFetch);
+  const controller = new SessionController(
+    { read: () => Promise.resolve('signed'), write: async () => {}, clear: async () => {} },
+    sessionTransport,
+  );
+  await controller.restore();
+  return { controller, nativeFetch };
+}
+it('一覧・詳細・担当中の取得と受注を署名Bearerで送り、レスポンスを検証する', async () => {
+  const { controller, nativeFetch } = await deliveryController();
+  nativeFetch.mockResolvedValueOnce(new Response(JSON.stringify({ orders: [delivery] })));
+  expect((await listDeliveries(controller)).orders[0]?.id).toBe(delivery.id);
+  nativeFetch.mockResolvedValueOnce(new Response(JSON.stringify({ order: delivery })));
+  expect((await deliveryDetail(controller, delivery.id)).order.isAssignedToMe).toBe(false);
+  nativeFetch.mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({ order: { ...delivery, isAssignedToMe: true, deliveryNote: '入口' } }),
+    ),
+  );
+  expect((await acceptDelivery(controller, delivery.id)).order.deliveryNote).toBe('入口');
+  const [path, init] = nativeFetch.mock.calls.at(-1)!;
+  expect(path).toBe(`http://api.example.test/courier/orders/${delivery.id}/accept`);
+  expect(init?.method).toBe('POST');
+  expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed');
+  nativeFetch.mockResolvedValueOnce(new Response('{"order":null}'));
+  expect(await currentDelivery(controller)).toEqual({ order: null });
+  nativeFetch.mockResolvedValueOnce(new Response('{"orders":[{"id":"invalid"}]}'));
+  await expect(listDeliveries(controller)).rejects.toThrow();
+});
+it('受注競合のコードを保持し、結果不明後も担当中の再取得で確認できる', async () => {
+  const { controller, nativeFetch } = await deliveryController();
+  nativeFetch.mockResolvedValueOnce(
+    new Response('{"code":"ORDER_ALREADY_ASSIGNED"}', { status: 409 }),
+  );
+  await expect(acceptDelivery(controller, delivery.id)).rejects.toMatchObject({
+    code: 'ORDER_ALREADY_ASSIGNED',
+    status: 409,
+  });
+  expect(controller.getSnapshot().status).toBe('authenticated');
+  nativeFetch.mockRejectedValueOnce(new TypeError('connection lost'));
+  await expect(acceptDelivery(controller, delivery.id)).rejects.toThrow('connection lost');
+  nativeFetch.mockResolvedValueOnce(
+    new Response(JSON.stringify({ order: { ...delivery, isAssignedToMe: true } })),
+  );
+  expect((await currentDelivery(controller)).order?.isAssignedToMe).toBe(true);
 });

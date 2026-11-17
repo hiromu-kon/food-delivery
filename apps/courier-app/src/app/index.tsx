@@ -10,6 +10,7 @@ import { ActivityIndicator, AppState, ScrollView, Switch, View } from 'react-nat
 import { getCourier, setAvailability } from '@/api/courier';
 import { AuthRequestError, errorMessage } from '@/features/auth/request';
 import type { SessionController } from '@/features/auth/session';
+import { Deliveries } from '@/features/deliveries/deliveries';
 import { useSession } from '@/features/auth/session-provider';
 
 function Screen({ title, children }: { title: string; children: ReactNode }) {
@@ -209,6 +210,9 @@ function CourierHome({ controller, user }: { controller: SessionController; user
           >
             稼働状態を再確認
           </Button>
+          {available !== null ? (
+            <Deliveries key={String(available)} controller={controller} available={available} />
+          ) : null}
           {loadError ? (
             <Text accessibilityRole="alert" className="text-danger">
               {loadError}

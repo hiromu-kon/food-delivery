@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { users } from './auth';
@@ -90,6 +91,9 @@ export const orders = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    uniqueIndex('orders_one_active_per_courier')
+      .on(t.courierId)
+      .where(sql`${t.status} in ('preparing', 'ready', 'delivering')`),
     check(
       'orders_totals',
       sql`${t.subtotal} >= 0 and ${t.deliveryFee} >= 0 and ${t.total} = ${t.subtotal} + ${t.deliveryFee}`,

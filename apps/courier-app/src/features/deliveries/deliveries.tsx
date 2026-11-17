@@ -1,0 +1,204 @@
+import type { CourierOrderDetail } from '@repo/contract';
+import { Button } from '@repo/native-ui/button';
+import { Text } from '@repo/native-ui/text';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, View } from 'react-native';
+
+import { acceptDelivery, currentDelivery, deliveryDetail, listDeliveries } from '@/api/courier';
+import { AuthRequestError, errorMessage } from '@/features/auth/request';
+import type { SessionController } from '@/features/auth/session';
+
+type DeliveryList = Awaited<ReturnType<typeof listDeliveries>>['orders'];
+
+export function Deliveries({
+  controller,
+  available,
+}: {
+  controller: SessionController;
+  available: boolean;
+}) {
+  const [orders, setOrders] = useState<DeliveryList>([]);
+  const [selected, setSelected] = useState<CourierOrderDetail | null>(null);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(true);
+  const generation = useRef(0);
+  const locked = useRef(true);
+  const [revision, setRevision] = useState(0);
+
+  useEffect(() => {
+    const current = ++generation.current;
+    locked.current = true;
+    void Promise.all([currentDelivery(controller), listDeliveries(controller)])
+      .then(([assigned, waiting]) => {
+        if (current !== generation.current) return;
+        setSelected(assigned.order);
+        setOrders(waiting.orders);
+      })
+      .catch((error: unknown) => {
+        if (current === generation.current) setMessage(errorMessage(error));
+      })
+      .finally(() => {
+        if (current === generation.current) {
+          locked.current = false;
+          setBusy(false);
+        }
+      });
+    const invalidate = () => {
+      generation.current++;
+    };
+    const listener = AppState.addEventListener('change', (state) => {
+      invalidate();
+      setBusy(true);
+      setSelected(null);
+      setOrders([]);
+      if (state === 'active') setRevision((value) => value + 1);
+    });
+    return () => {
+      invalidate();
+      listener.remove();
+    };
+  }, [controller, available, revision]);
+
+  function reload() {
+    generation.current++;
+    locked.current = true;
+    setBusy(true);
+    setSelected(null);
+    setOrders([]);
+    setRevision((value) => value + 1);
+  }
+
+  async function run(action: () => Promise<CourierOrderDetail>) {
+    if (locked.current) return;
+    locked.current = true;
+    const current = ++generation.current;
+    setBusy(true);
+    setMessage('');
+    try {
+      const order = await action();
+      if (current === generation.current) setSelected(order);
+    } catch (error) {
+      if (current !== generation.current) return;
+      setMessage(errorMessage(error));
+      if (
+        error instanceof AuthRequestError &&
+        ['ORDER_ALREADY_ASSIGNED', 'NOT_FOUND'].includes(error.code)
+      ) {
+        reload();
+      }
+    } finally {
+      if (current === generation.current) {
+        locked.current = false;
+        setBusy(false);
+      }
+    }
+  }
+
+  return (
+    <View className="gap-4">
+      <Text variant="heading-l">
+        {selected ? (selected.isAssignedToMe ? '担当中の配達' : '配達の詳細') : '配達待ちの注文'}
+      </Text>
+      {message ? (
+        <Text accessibilityRole="alert" className="text-danger">
+          {message}
+        </Text>
+      ) : null}
+      {selected ? (
+        <>
+          <Text variant="heading-m">{selected.storeName}</Text>
+          <Text>店舗：{selected.storeAddress}</Text>
+          <Text>
+            お届け先：{selected.address} {selected.building}
+          </Text>
+          <Text>店舗からお届け先まで直線 {(selected.distanceMeters / 1000).toFixed(1)} km</Text>
+          <Text>
+            {selected.status === 'preparing'
+              ? '調理中'
+              : selected.status === 'ready'
+                ? '準備完了'
+                : selected.status === 'delivering'
+                  ? '配達中'
+                  : '配達待ちではありません'}
+          </Text>
+          {selected.items.map((item) => (
+            <Text key={item.menuItemId}>
+              {item.name} × {item.quantity}
+            </Text>
+          ))}
+          <Text>{selected.fulfillment === 'hand_delivery' ? '手渡し' : '置き配'}</Text>
+          {selected.isAssignedToMe ? (
+            <>
+              {selected.dropoffLocation ? (
+                <Text>
+                  置き場所：
+                  {
+                    {
+                      front_door: '玄関前',
+                      delivery_box: '宅配ボックス',
+                      other: 'その他（配達メモ）',
+                    }[selected.dropoffLocation]
+                  }
+                </Text>
+              ) : null}
+              <Text>配達メモ：{selected.deliveryNote || 'なし'}</Text>
+            </>
+          ) : (
+            <>
+              <Button
+                loading={busy}
+                disabled={!available}
+                onPress={() =>
+                  void run(async () => (await acceptDelivery(controller, selected.id)).order)
+                }
+              >
+                担当になる
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onPress={() => {
+                  generation.current++;
+                  setSelected(null);
+                }}
+              >
+                一覧に戻る
+              </Button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {!available ? (
+            <Text>稼働中に切り替えると配達待ちの注文を確認できます。</Text>
+          ) : !busy && orders.length === 0 ? (
+            <Text>配達待ちの注文はありません。</Text>
+          ) : null}
+          {orders.map((order) => (
+            <Button
+              key={order.id}
+              variant="secondary"
+              disabled={busy}
+              onPress={() =>
+                void run(async () => (await deliveryDetail(controller, order.id)).order)
+              }
+            >
+              {order.storeName} · 直線 {(order.distanceMeters / 1000).toFixed(1)} km
+            </Button>
+          ))}
+        </>
+      )}
+      <Button
+        variant="secondary"
+        disabled={busy}
+        onPress={() => {
+          setMessage('');
+          reload();
+        }}
+      >
+        一覧・担当中の配達を再確認
+      </Button>
+      {busy ? <Text>確認中…</Text> : null}
+    </View>
+  );
+}
