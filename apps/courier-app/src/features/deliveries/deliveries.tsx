@@ -4,7 +4,14 @@ import { Text } from '@repo/native-ui/text';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
 
-import { acceptDelivery, currentDelivery, deliveryDetail, listDeliveries } from '@/api/courier';
+import {
+  acceptDelivery,
+  completeDelivery,
+  currentDelivery,
+  deliveryDetail,
+  listDeliveries,
+  receiveDelivery,
+} from '@/api/courier';
 import { AuthRequestError, errorMessage } from '@/features/auth/request';
 import type { SessionController } from '@/features/auth/session';
 
@@ -68,7 +75,7 @@ export function Deliveries({
     setRevision((value) => value + 1);
   }
 
-  async function run(action: () => Promise<CourierOrderDetail>) {
+  async function run(action: () => Promise<CourierOrderDetail | null>) {
     if (locked.current) return;
     locked.current = true;
     const current = ++generation.current;
@@ -76,7 +83,10 @@ export function Deliveries({
     setMessage('');
     try {
       const order = await action();
-      if (current === generation.current) setSelected(order);
+      if (current === generation.current) {
+        setSelected(order);
+        if (!order) setRevision((value) => value + 1);
+      }
     } catch (error) {
       if (current !== generation.current) return;
       setMessage(errorMessage(error));
@@ -129,6 +139,36 @@ export function Deliveries({
           <Text>{selected.fulfillment === 'hand_delivery' ? '手渡し' : '置き配'}</Text>
           {selected.isAssignedToMe ? (
             <>
+              <Text>注文者の連絡先：{selected.customerPhoneNumber ?? '未登録'}</Text>
+              {selected.status === 'ready' ? (
+                <Button
+                  loading={busy}
+                  onPress={() =>
+                    void run(async () => (await receiveDelivery(controller, selected.id)).order)
+                  }
+                >
+                  受け取った
+                </Button>
+              ) : null}
+              {selected.status === 'delivering' && selected.fulfillment === 'leave_at_door' ? (
+                <Text accessibilityRole="alert" className="text-danger">
+                  置き配写真の保存に対応するまで配達完了にはできません。
+                </Text>
+              ) : null}
+              {selected.status === 'delivering' ? (
+                <Button
+                  loading={busy}
+                  disabled={selected.fulfillment === 'leave_at_door'}
+                  onPress={() =>
+                    void run(async () => {
+                      await completeDelivery(controller, selected.id);
+                      return null;
+                    })
+                  }
+                >
+                  渡した・配達完了
+                </Button>
+              ) : null}
               {selected.dropoffLocation ? (
                 <Text>
                   置き場所：

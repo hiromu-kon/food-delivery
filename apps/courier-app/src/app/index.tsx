@@ -7,7 +7,7 @@ import { Stack } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, AppState, ScrollView, Switch, View } from 'react-native';
 
-import { getCourier, setAvailability } from '@/api/courier';
+import { deliveryHistory, getCourier, setAvailability } from '@/api/courier';
 import { AuthRequestError, errorMessage } from '@/features/auth/request';
 import type { SessionController } from '@/features/auth/session';
 import { Deliveries } from '@/features/deliveries/deliveries';
@@ -124,7 +124,13 @@ function CourierHome({ controller, user }: { controller: SessionController; user
   const [available, setAvailable] = useState<boolean | null>(null);
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [account, setAccount] = useState(false);
+  const [section, setSection] = useState<'home' | 'history' | 'account'>('home');
+  const [deliveries, setDeliveries] = useState<
+    Awaited<ReturnType<typeof deliveryHistory>>['deliveries']
+  >([]);
+  const [historyError, setHistoryError] = useState('');
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyRevision, setHistoryRevision] = useState(0);
   const action = useAction();
   useEffect(() => {
     let active = true;
@@ -149,17 +155,55 @@ function CourierHome({ controller, user }: { controller: SessionController; user
       listener.remove();
     };
   }, [controller]);
+  useEffect(() => {
+    if (section !== 'history') return;
+    let active = true;
+    void deliveryHistory(controller)
+      .then((result) => {
+        if (active) setDeliveries(result.deliveries);
+      })
+      .catch((error: unknown) => {
+        if (active) setHistoryError(errorMessage(error));
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
+      });
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        setHistoryLoading(true);
+        setHistoryError('');
+        setHistoryRevision((value) => value + 1);
+      }
+    });
+    return () => {
+      active = false;
+      listener.remove();
+    };
+  }, [controller, section, historyRevision]);
   return (
-    <Screen title={account ? 'アカウント' : 'ホーム'}>
-      <View className="flex-row justify-between">
-        <Button variant="ghost" disabled={action.busy} onPress={() => setAccount(false)}>
+    <Screen
+      title={section === 'account' ? 'アカウント' : section === 'history' ? '配達履歴' : 'ホーム'}
+    >
+      <View className="flex-row justify-between gap-2">
+        <Button variant="ghost" disabled={action.busy} onPress={() => setSection('home')}>
           ホーム
         </Button>
-        <Button variant="ghost" disabled={action.busy} onPress={() => setAccount(true)}>
+        <Button
+          variant="ghost"
+          disabled={action.busy}
+          onPress={() => {
+            setHistoryLoading(true);
+            setHistoryError('');
+            setSection('history');
+          }}
+        >
+          配達履歴
+        </Button>
+        <Button variant="ghost" disabled={action.busy} onPress={() => setSection('account')}>
           アカウント
         </Button>
       </View>
-      {account ? (
+      {section === 'account' ? (
         <>
           <Text variant="heading-l">登録情報</Text>
           <Text>{user.name}</Text>
@@ -167,6 +211,40 @@ function CourierHome({ controller, user }: { controller: SessionController; user
           <Text>{user.phoneNumber}</Text>
           <Button loading={action.busy} onPress={() => void action.run(controller.logout)}>
             ログアウト
+          </Button>
+        </>
+      ) : section === 'history' ? (
+        <>
+          <Text variant="heading-l">配達履歴</Text>
+          {historyError ? (
+            <Text accessibilityRole="alert" className="text-danger">
+              {historyError}
+            </Text>
+          ) : null}
+          {historyLoading ? (
+            <Text accessibilityRole="progressbar">配達履歴を読み込んでいます…</Text>
+          ) : null}
+          {!historyLoading && !historyError && deliveries.length === 0 ? (
+            <Text>配達履歴はありません。</Text>
+          ) : null}
+          {deliveries.map((delivery) => (
+            <View key={delivery.id} className="bg-subtle rounded-md p-4 gap-2">
+              <Text variant="heading-m">{delivery.storeName}</Text>
+              <Text>配達完了：{new Date(delivery.deliveredAt).toLocaleString('ja-JP')}</Text>
+              <Text>注文番号：{delivery.id}</Text>
+              <Text>合計：{delivery.total.toLocaleString('ja-JP')} 円</Text>
+            </View>
+          ))}
+          <Button
+            variant="secondary"
+            disabled={historyLoading}
+            onPress={() => {
+              setHistoryLoading(true);
+              setHistoryError('');
+              setHistoryRevision((value) => value + 1);
+            }}
+          >
+            履歴を再読み込み
           </Button>
         </>
       ) : (
