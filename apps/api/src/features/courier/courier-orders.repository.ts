@@ -25,6 +25,7 @@ async function detail(tx: Tx, userId: string, id: string) {
       id: orders.id,
       status: orders.status,
       courierId: orders.courierId,
+      customerPhoneNumber: users.phoneNumber,
       storeName: stores.name,
       storeAddress: stores.address,
       storeLatitude: stores.latitude,
@@ -38,12 +39,21 @@ async function detail(tx: Tx, userId: string, id: string) {
       deliveryNote: orders.deliveryNote,
     })
     .from(orders)
+    .innerJoin(users, eq(users.id, orders.userId))
     .innerJoin(stores, eq(stores.id, orders.storeId))
     .where(and(eq(orders.id, id), or(waiting, eq(orders.courierId, userId))));
   if (!row)
     throw new DomainError('NOT_FOUND', '配達待ちの注文が見つかりません。一覧を更新してください');
-  const { courierId, deliveryNote, storeLatitude, storeLongitude, latitude, longitude, ...order } =
-    row;
+  const {
+    courierId,
+    customerPhoneNumber,
+    deliveryNote,
+    storeLatitude,
+    storeLongitude,
+    latitude,
+    longitude,
+    ...order
+  } = row;
   return {
     ...order,
     distanceMeters: distanceMeters(
@@ -51,6 +61,7 @@ async function detail(tx: Tx, userId: string, id: string) {
       { latitude, longitude },
     ),
     isAssignedToMe: courierId === userId,
+    ...(courierId === userId && { customerPhoneNumber }),
     ...(courierId === userId && { deliveryNote }),
     items: await tx
       .select({
@@ -159,6 +170,11 @@ export function createCourierOrdersRepository(db: Db) {
         if (order.status === 'delivered') return { order: await detail(tx, userId, id) };
         if (order.status !== 'delivering')
           throw new DomainError('ORDER_INVALID_TRANSITION', '配達中の注文だけ完了できます');
+        if (order.fulfillment === 'leave_at_door')
+          throw new DomainError(
+            'DELIVERY_PHOTO_REQUIRED',
+            '置き配写真の保存が利用できるまで配達完了にできません',
+          );
         await tx.update(orders).set({ status: 'delivered' }).where(eq(orders.id, id));
         await tx.insert(orderStatusHistory).values({ orderId: id, status: 'delivered' });
         return { order: await detail(tx, userId, id) };

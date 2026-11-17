@@ -21,6 +21,7 @@ export const courierOrderSummarySchema = z.object({
 });
 export const courierOrderDetailSchema = courierOrderSummarySchema.extend({
   storeAddress: z.string(),
+  customerPhoneNumber: z.string().nullable().optional(),
   address: z.string(),
   building: z.string(),
   items: z.array(customerOrderItemSchema),

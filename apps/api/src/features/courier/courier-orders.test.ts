@@ -65,7 +65,10 @@ async function courier() {
     authorization: `Bearer ${token}.${createHmac('sha256', config.secret).update(token).digest('base64')}`,
   };
 }
-async function order(status: typeof orders.$inferSelect.status = 'ready') {
+async function order(
+  status: typeof orders.$inferSelect.status = 'ready',
+  fulfillment: CheckoutQuote['fulfillment'] = 'leave_at_door',
+) {
   const id = randomUUID();
   const quote: CheckoutQuote = {
     storeId,
@@ -74,8 +77,8 @@ async function order(status: typeof orders.$inferSelect.status = 'ready') {
     latitude: 35.001,
     longitude: 139,
     deliveryNote: '担当者だけのメモ',
-    fulfillment: 'leave_at_door',
-    dropoffLocation: 'front_door',
+    fulfillment,
+    dropoffLocation: fulfillment === 'leave_at_door' ? 'front_door' : null,
     subtotal: 700,
     deliveryFee: 300,
     total: 1000,
@@ -182,10 +185,13 @@ describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
     const id = await order('preparing');
     const before = courierOrderResponseSchema.parse(await (await request(a, `/${id}`)).json());
     expect(before.order).not.toHaveProperty('deliveryNote');
+    expect(before.order).not.toHaveProperty('customerPhoneNumber');
     expect(before.order.items[0]?.name).toBe('注文時の商品名');
     const first = await accept(a, id);
     expect(first.status).toBe(200);
-    expect(await first.json()).toHaveProperty('order.deliveryNote', '担当者だけのメモ');
+    const accepted = await first.json();
+    expect(accepted).toHaveProperty('order.deliveryNote', '担当者だけのメモ');
+    expect(accepted).toHaveProperty('order.customerPhoneNumber', '09000000000');
     await db.update(couriers).set({ isAvailable: false }).where(eq(couriers.userId, a.id));
     expect((await accept(a, id)).status).toBe(200);
     expect(await (await request(a, '/current')).json()).toHaveProperty('order.id', id);
@@ -270,9 +276,17 @@ describe('F-15 受け取り・配達完了・履歴（実PostgreSQL、決済な�
     expect((await deliver(b, ready)).status).toBe(409);
   });
 
+  it('置き配は写真の保存が使えるまで配達完了にできない', async () => {
+    const id = await order('ready');
+    await accept(a, id);
+    await receive(a, id);
+    expect(await (await deliver(a, id)).json()).toMatchObject({ code: 'DELIVERY_PHOTO_REQUIRED' });
+    expect(await (await request(a, `/${id}`)).json()).toHaveProperty('order.status', 'delivering');
+  });
+
   it('担当配達員だけが配達中から完了に進め、本人の配達履歴だけを新しい順に返す', async () => {
-    const first = await order('ready');
-    const second = await order('ready');
+    const first = await order('ready', 'hand_delivery');
+    const second = await order('ready', 'hand_delivery');
     await accept(a, first);
     await receive(a, first);
     expect((await deliver(a, first)).status).toBe(200);
