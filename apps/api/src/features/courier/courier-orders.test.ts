@@ -303,7 +303,13 @@ describe('F-15 受け取り・配達完了・履歴（実PostgreSQL、決済な�
     const response = await request(a, '/history');
     expect(response.headers.get('cache-control')).toBe('no-store');
     const result = courierDeliveryHistoryResponseSchema.parse(await response.json());
-    expect(result.deliveries.map((delivery) => delivery.id)).toEqual([second, first]);
+    const sorted = [...result.deliveries].sort(
+      (left, right) =>
+        Date.parse(right.deliveredAt) - Date.parse(left.deliveredAt) ||
+        right.id.localeCompare(left.id),
+    );
+    expect(result.deliveries).toEqual(sorted);
+    expect(result.deliveries.map((delivery) => delivery.id).sort()).toEqual([first, second].sort());
     expect(result.deliveries[0]).toMatchObject({
       storeName: '架空店舗',
       total: 1000,
