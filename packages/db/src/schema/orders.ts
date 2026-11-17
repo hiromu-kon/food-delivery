@@ -71,6 +71,10 @@ export const orders = pgTable(
     status: orderStatus().notNull().default('pending'),
     paymentIntentId: text().notNull().unique(),
     cancellationReason: text().$type<'customer' | 'store_rejected' | 'expired' | 'admin'>(),
+    courierId: text().references(() => users.id),
+    refundStartedAt: timestamp({ withTimezone: true }),
+    refundedAt: timestamp({ withTimezone: true }),
+    refundId: text().unique(),
     captureStartedAt: timestamp({ withTimezone: true }),
     paymentVoidedAt: timestamp({ withTimezone: true }),
     subtotal: integer().notNull(),
@@ -128,3 +132,26 @@ export const orderSettings = pgTable(
     check('order_settings_fee', sql`${t.deliveryFee} >= 0`),
   ],
 );
+
+export const orderAdminEvents = pgTable('order_admin_events', {
+  id: uuid().primaryKey().defaultRandom(),
+  orderId: uuid()
+    .notNull()
+    .references(() => orders.id),
+  actorId: text()
+    .notNull()
+    .references(() => users.id),
+  action: text().$type<'cancel' | 'unassign'>().notNull(),
+  previousStatus: orderStatus().notNull(),
+  courierId: text(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const orderStatusHistory = pgTable('order_status_history', {
+  id: uuid().primaryKey().defaultRandom(),
+  orderId: uuid()
+    .notNull()
+    .references(() => orders.id),
+  status: orderStatus().notNull(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});

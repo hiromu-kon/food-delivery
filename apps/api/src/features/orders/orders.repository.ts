@@ -3,6 +3,7 @@ import {
   checkoutAttempts,
   menuItems,
   orderItems,
+  orderStatusHistory,
   orders,
   orderSettings,
   stores,
@@ -53,6 +54,12 @@ export function createOrderRepository(db: Db) {
       return order;
     },
     async reserveCancellation(tx: Tx, id: string) {
+      const [previous] = await tx
+        .select({ status: orders.status })
+        .from(orders)
+        .where(eq(orders.id, id));
+      if (previous?.status !== 'canceled')
+        await tx.insert(orderStatusHistory).values({ orderId: id, status: 'canceled' });
       await tx
         .update(orders)
         .set({ status: 'canceled', cancellationReason: 'customer' })
@@ -225,6 +232,7 @@ export function createOrderRepository(db: Db) {
     ) {
       const { items, ...values } = quote;
       await tx.insert(orders).values({ ...values, id, userId, paymentIntentId, status: 'pending' });
+      await tx.insert(orderStatusHistory).values({ orderId: id, status: 'pending' });
       await tx.insert(orderItems).values(items.map((item) => ({ ...item, orderId: id })));
       const order = await this.result(tx, id);
       if (!order) throw new Error('Order not saved');

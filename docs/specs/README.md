@@ -38,3 +38,5 @@ ID は一度付けたら変えない。廃止するときは欠番にする。
 注文者nativeアプリのカート・ローカル保存・S-C05/S-C06の動作は [cart-app.md](cart-app.md) を参照する。
 
 店舗Webのカテゴリ・商品管理（F-11 / S-S04・S-S05）は [menu-management-web.md](menu-management-web.md) を参照する。
+
+運営Webの注文検索・詳細・テスト用返金・担当解除（F-19 / S-A02・S-A03）は [admin-orders.md](admin-orders.md) を参照する。

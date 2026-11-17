@@ -62,3 +62,15 @@ it('R-05 R-06 store actions reject every illegal source state and the deadline b
     assertStoreOrderAction('pending', 'accept', created, new Date(created.getTime() + 600000)),
   ).toThrow();
 });
+
+it('R-08 受付後だけキャンセルでき、運営取消の再送を許可する', async () => {
+  const { assertAdminCancellation, canRetryRefund } = await import('./status');
+  for (const status of ['preparing', 'ready', 'delivering'] as const)
+    expect(() => assertAdminCancellation(status, null)).not.toThrow();
+  expect(() => assertAdminCancellation('canceled', 'admin')).not.toThrow();
+  for (const status of ['pending', 'delivered', 'canceled'] as const)
+    expect(() => assertAdminCancellation(status, null)).toThrow();
+  const started = new Date('2026-11-16T00:00:00Z');
+  expect(canRetryRefund(started, new Date('2026-11-16T22:59:59Z'))).toBe(true);
+  expect(canRetryRefund(started, new Date('2026-11-16T23:00:00Z'))).toBe(false);
+});
