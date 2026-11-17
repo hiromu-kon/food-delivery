@@ -2,7 +2,7 @@ import { DeliveryCamera } from './delivery-camera';
 import type { CourierOrderDetail } from '@repo/contract';
 import { Button } from '@repo/native-ui/button';
 import { Text } from '@repo/native-ui/text';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, View } from 'react-native';
 
 import {
@@ -22,9 +22,11 @@ type DeliveryList = Awaited<ReturnType<typeof listDeliveries>>['orders'];
 export function Deliveries({
   controller,
   available,
+  onFooterChange,
 }: {
   controller: SessionController;
   available: boolean;
+  onFooterChange: (footer: ReactNode | null) => void;
 }) {
   const [orders, setOrders] = useState<DeliveryList>([]);
   const [selected, setSelected] = useState<CourierOrderDetail | null>(null);
@@ -77,20 +79,22 @@ export function Deliveries({
     setRevision((value) => value + 1);
   }
 
-  async function run(action: () => Promise<CourierOrderDetail | null>) {
-    if (locked.current) return;
+  async function run(action: () => Promise<CourierOrderDetail | null>): Promise<boolean> {
+    if (locked.current) return false;
     locked.current = true;
     const current = ++generation.current;
     setBusy(true);
     setMessage('');
+    let succeeded = false;
     try {
       const order = await action();
       if (current === generation.current) {
         setSelected(order);
         if (!order) setRevision((value) => value + 1);
+        succeeded = true;
       }
     } catch (error) {
-      if (current !== generation.current) return;
+      if (current !== generation.current) return false;
       setMessage(errorMessage(error));
       if (
         error instanceof AuthRequestError &&
@@ -104,7 +108,19 @@ export function Deliveries({
         setBusy(false);
       }
     }
+    return succeeded;
   }
+
+  useEffect(() => {
+    if (
+      !selected?.isAssignedToMe ||
+      selected.status !== 'delivering' ||
+      selected.fulfillment !== 'leave_at_door'
+    ) {
+      onFooterChange(null);
+    }
+    return () => onFooterChange(null);
+  }, [onFooterChange, selected]);
 
   return (
     <View className="gap-4">
@@ -118,30 +134,54 @@ export function Deliveries({
       ) : null}
       {selected ? (
         <>
+          <View className="gap-2 rounded-2xl border border-default p-4">
+            <Text className="text-secondary">配達状況</Text>
+            <Text variant="heading-m">
+              {selected.status === 'preparing'
+                ? '調理中'
+                : selected.status === 'ready'
+                  ? '準備完了'
+                  : selected.status === 'delivering'
+                    ? '配達中'
+                    : '配達待ちではありません'}
+            </Text>
+          </View>
+          <View className="gap-2 rounded-2xl border border-default p-4">
+            <Text className="text-secondary">お届け先</Text>
+            <Text variant="heading-m">{selected.address}</Text>
+            {selected.building ? <Text>{selected.building}</Text> : null}
+            <Text>{selected.customerPhoneNumber ?? '電話番号未登録'}</Text>
+            <Text>店舗から直線 {(selected.distanceMeters / 1000).toFixed(1)} km</Text>
+          </View>
           <Text variant="heading-m">{selected.storeName}</Text>
           <Text>店舗：{selected.storeAddress}</Text>
-          <Text>
-            お届け先：{selected.address} {selected.building}
-          </Text>
-          <Text>店舗からお届け先まで直線 {(selected.distanceMeters / 1000).toFixed(1)} km</Text>
-          <Text>
-            {selected.status === 'preparing'
-              ? '調理中'
-              : selected.status === 'ready'
-                ? '準備完了'
-                : selected.status === 'delivering'
-                  ? '配達中'
-                  : '配達待ちではありません'}
-          </Text>
-          {selected.items.map((item) => (
-            <Text key={item.menuItemId}>
-              {item.name} × {item.quantity}
-            </Text>
-          ))}
-          <Text>{selected.fulfillment === 'hand_delivery' ? '手渡し' : '置き配'}</Text>
+          <View className="gap-2 rounded-2xl border border-default p-4">
+            <Text className="text-secondary">注文内容</Text>
+            {selected.items.map((item) => (
+              <Text key={item.menuItemId}>
+                {item.name} × {item.quantity}
+              </Text>
+            ))}
+          </View>
+          <View className="gap-2 rounded-2xl border border-default p-4">
+            <Text className="text-secondary">お渡し方法</Text>
+            <Text>{selected.fulfillment === 'hand_delivery' ? '手渡し' : '置き配'}</Text>
+            {selected.dropoffLocation ? (
+              <Text>
+                置き場所：
+                {
+                  {
+                    front_door: '玄関前',
+                    delivery_box: '宅配ボックス',
+                    other: 'その他（配達メモ）',
+                  }[selected.dropoffLocation]
+                }
+              </Text>
+            ) : null}
+            <Text>配達メモ：{selected.deliveryNote || 'なし'}</Text>
+          </View>
           {selected.isAssignedToMe ? (
             <>
-              <Text>注文者の連絡先：{selected.customerPhoneNumber ?? '未登録'}</Text>
               {selected.status === 'ready' ? (
                 <Button
                   loading={busy}
@@ -160,19 +200,26 @@ export function Deliveries({
                   <DeliveryCamera
                     key={selected.id}
                     busy={busy}
-                    onUpload={(photo) =>
+                    hasUploadedPhoto={selected.hasDeliveryPhoto}
+                    onUpload={async (photo) =>
                       run(
                         async () =>
                           (await uploadDeliveryPhoto(controller, selected.id, photo)).order,
                       )
                     }
+                    onComplete={() => {
+                      void run(async () => {
+                        await completeDelivery(controller, selected.id);
+                        return null;
+                      });
+                    }}
+                    onFooterChange={onFooterChange}
                   />
                 </View>
               ) : null}
-              {selected.status === 'delivering' ? (
+              {selected.status === 'delivering' && selected.fulfillment === 'hand_delivery' ? (
                 <Button
                   loading={busy}
-                  disabled={selected.fulfillment === 'leave_at_door' && !selected.hasDeliveryPhoto}
                   onPress={() =>
                     void run(async () => {
                       await completeDelivery(controller, selected.id);
@@ -183,19 +230,6 @@ export function Deliveries({
                   渡した・配達完了
                 </Button>
               ) : null}
-              {selected.dropoffLocation ? (
-                <Text>
-                  置き場所：
-                  {
-                    {
-                      front_door: '玄関前',
-                      delivery_box: '宅配ボックス',
-                      other: 'その他（配達メモ）',
-                    }[selected.dropoffLocation]
-                  }
-                </Text>
-              ) : null}
-              <Text>配達メモ：{selected.deliveryNote || 'なし'}</Text>
             </>
           ) : (
             <>

@@ -1,4 +1,4 @@
-import React, { useEffect, useImperativeHandle } from 'react';
+import React, { useEffect, useImperativeHandle, useState } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { DeliveryCamera } from './delivery-camera';
@@ -40,8 +40,24 @@ afterEach(async () => {
   renderer = undefined;
 });
 async function mount(onUpload = vi.fn().mockResolvedValue(undefined)) {
+  const onComplete = vi.fn();
+  function Harness() {
+    const [footer, setFooter] = useState<React.ReactNode>(null);
+    return React.createElement(
+      'view',
+      null,
+      React.createElement(DeliveryCamera, {
+        busy: false,
+        hasUploadedPhoto: false,
+        onUpload,
+        onComplete,
+        onFooterChange: setFooter,
+      }),
+      footer,
+    );
+  }
   await act(() => {
-    renderer = create(<DeliveryCamera busy={false} onUpload={onUpload} />);
+    renderer = create(<Harness />);
   });
   return onUpload;
 }
@@ -51,12 +67,13 @@ async function press(label: string) {
     .find((node) => node.props.children === label);
   if (!button) throw new Error(`Button missing: ${label}`);
   const action = button.props.onPress as () => void;
-  await act(() => {
+  await act(async () => {
     action();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 it('R-15 撮影後はプレビューで確認し、明示送信するまでアップロードしない。端末キャッシュを削除する', async () => {
-  const upload = await mount();
+  const upload = await mount(vi.fn().mockResolvedValue(true));
   sdk.capture.mockResolvedValue({ base64: '/9j/2Q==', uri: 'file:///synthetic-photo.jpg' });
   await press('置いた場所の写真を撮る');
   await press('撮影する');
