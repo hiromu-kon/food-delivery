@@ -70,7 +70,10 @@ export function createApp(options: {
     )
     .route('/health', healthRoutes)
     .route('/admin/couriers', createCourierAdminRoutes(options.auth, options.db, options.config))
-    .route('/admin', createAdminAuthRoutes(options.auth, options.db, options.config))
+    .route(
+      '/admin',
+      createAdminAuthRoutes(options.auth, options.db, options.config, options.geocoder ?? createOpenCageGeocoder()),
+    )
     .route('/courier', createCourierRoutes(options.auth, options.db, options.config))
     .route('/stores', createStoreRoutes(options.auth, options.db, options.config))
     .route(
