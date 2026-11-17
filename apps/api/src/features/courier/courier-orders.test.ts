@@ -1,11 +1,16 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { courierOrderListSchema, courierOrderResponseSchema } from '@repo/contract';
+import {
+  courierDeliveryHistoryResponseSchema,
+  courierOrderListSchema,
+  courierOrderResponseSchema,
+} from '@repo/contract';
 import {
   checkoutAttempts,
   couriers,
   createDb,
   orderItems,
+  orderStatusHistory,
   orders,
   sessions,
   stores,
@@ -60,7 +65,10 @@ async function courier() {
     authorization: `Bearer ${token}.${createHmac('sha256', config.secret).update(token).digest('base64')}`,
   };
 }
-async function order(status: typeof orders.$inferSelect.status = 'ready') {
+async function order(
+  status: typeof orders.$inferSelect.status = 'ready',
+  fulfillment: CheckoutQuote['fulfillment'] = 'leave_at_door',
+) {
   const id = randomUUID();
   const quote: CheckoutQuote = {
     storeId,
@@ -69,8 +77,8 @@ async function order(status: typeof orders.$inferSelect.status = 'ready') {
     latitude: 35.001,
     longitude: 139,
     deliveryNote: '担当者だけのメモ',
-    fulfillment: 'leave_at_door',
-    dropoffLocation: 'front_door',
+    fulfillment,
+    dropoffLocation: fulfillment === 'leave_at_door' ? 'front_door' : null,
     subtotal: 700,
     deliveryFee: 300,
     total: 1000,
@@ -96,10 +104,13 @@ const request = (actor: typeof a, path: string, method = 'GET') =>
     headers: { authorization: actor.authorization },
   });
 const accept = (actor: typeof a, id: string) => request(actor, `/${id}/accept`, 'POST');
+const receive = (actor: typeof a, id: string) => request(actor, `/${id}/receive`, 'POST');
+const deliver = (actor: typeof a, id: string) => request(actor, `/${id}/deliver`, 'POST');
 async function clean() {
   if (storeId) {
     const rows = await db.select({ id: orders.id }).from(orders).where(eq(orders.storeId, storeId));
     for (const row of rows) {
+      await db.delete(orderStatusHistory).where(eq(orderStatusHistory.orderId, row.id));
       await db.delete(orderItems).where(eq(orderItems.orderId, row.id));
       await db.delete(orders).where(eq(orders.id, row.id));
       await db.delete(checkoutAttempts).where(eq(checkoutAttempts.id, row.id));
@@ -134,13 +145,15 @@ afterAll(async () => {
 describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
   it('R-11 調理中・準備完了の未担当注文だけを一覧に返し、距離を計算する', async () => {
     const ids = [await order('preparing'), await order('ready')];
+    const excludedIds: string[] = [];
     for (const status of ['pending', 'delivering', 'delivered', 'canceled'] as const)
-      await order(status);
+      excludedIds.push(await order(status));
     const response = await request(a, '');
     expect(response.headers.get('cache-control')).toBe('no-store');
     const result = courierOrderListSchema.parse(await response.json());
-    expect(result.orders.map((row) => row.id)).toEqual(ids);
-    expect(result.orders[0]?.distanceMeters).toBeCloseTo(111.195, 2);
+    expect(result.orders.map((row) => row.id)).toEqual(expect.arrayContaining(ids));
+    for (const id of excludedIds) expect(result.orders.map((row) => row.id)).not.toContain(id);
+    expect(result.orders.find((row) => row.id === ids[0])?.distanceMeters).toBeCloseTo(111.195, 2);
     expect(JSON.stringify(result)).not.toContain('担当者だけのメモ');
     expect(JSON.stringify(result)).not.toContain('架空お届け先');
     await db.update(couriers).set({ isAvailable: false }).where(eq(couriers.userId, a.id));
@@ -155,7 +168,8 @@ describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
     expect(stored?.status).toBe('ready');
     const loser = stored?.courierId === a.id ? b : a;
     expect((await request(loser, `/${id}`)).status).toBe(404);
-    expect(await (await request(loser, '')).json()).toEqual({ orders: [] });
+    const loserList = courierOrderListSchema.parse(await (await request(loser, '')).json());
+    expect(loserList.orders.map((row) => row.id)).not.toContain(id);
   });
   it('R-11 同じ配達員が別注文を同時に受けても1件だけになる', async () => {
     const responses = await Promise.all([
@@ -174,10 +188,13 @@ describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
     const id = await order('preparing');
     const before = courierOrderResponseSchema.parse(await (await request(a, `/${id}`)).json());
     expect(before.order).not.toHaveProperty('deliveryNote');
+    expect(before.order).not.toHaveProperty('customerPhoneNumber');
     expect(before.order.items[0]?.name).toBe('注文時の商品名');
     const first = await accept(a, id);
     expect(first.status).toBe(200);
-    expect(await first.json()).toHaveProperty('order.deliveryNote', '担当者だけのメモ');
+    const accepted = await first.json();
+    expect(accepted).toHaveProperty('order.deliveryNote', '担当者だけのメモ');
+    expect(accepted).toHaveProperty('order.customerPhoneNumber', '09000000000');
     await db.update(couriers).set({ isAvailable: false }).where(eq(couriers.userId, a.id));
     expect((await accept(a, id)).status).toBe(200);
     expect(await (await request(a, '/current')).json()).toHaveProperty('order.id', id);
@@ -235,5 +252,71 @@ describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
         })
       ).status,
     ).toBe(403);
+  });
+});
+
+describe('F-15 受け取り・配達完了・履歴（実PostgreSQL、決済なし）', () => {
+  it('担当配達員だけが準備完了から配達中へ進め、再送は同じ結果を返す', async () => {
+    const id = await order('ready');
+    await accept(a, id);
+    expect(await (await receive(b, id)).json()).toMatchObject({ code: 'NOT_FOUND' });
+    expect(await (await receive(a, id)).json()).toHaveProperty('order.status', 'delivering');
+    expect(await (await receive(a, id)).json()).toHaveProperty('order.status', 'delivering');
+    const transitions = await db
+      .select()
+      .from(orderStatusHistory)
+      .where(eq(orderStatusHistory.orderId, id));
+    expect(transitions.filter((entry) => entry.status === 'delivering')).toHaveLength(1);
+  });
+
+  it('準備完了以外は受け取れず、担当中以外は配達完了にできない', async () => {
+    const preparing = await order('preparing');
+    await accept(a, preparing);
+    expect((await receive(a, preparing)).status).toBe(409);
+    const ready = await order('ready');
+    expect((await receive(a, ready)).status).toBe(404);
+    await accept(b, ready);
+    expect((await deliver(b, ready)).status).toBe(409);
+  });
+
+  it('置き配は写真の保存が使えるまで配達完了にできない', async () => {
+    const id = await order('ready');
+    await accept(a, id);
+    await receive(a, id);
+    expect(await (await deliver(a, id)).json()).toMatchObject({ code: 'DELIVERY_PHOTO_REQUIRED' });
+    expect(await (await request(a, `/${id}`)).json()).toHaveProperty('order.status', 'delivering');
+  });
+
+  it('担当配達員だけが配達中から完了に進め、本人の配達履歴だけを新しい順に返す', async () => {
+    const first = await order('ready', 'hand_delivery');
+    const second = await order('ready', 'hand_delivery');
+    await accept(a, first);
+    await receive(a, first);
+    expect((await deliver(a, first)).status).toBe(200);
+    expect((await deliver(a, first)).status).toBe(200);
+    const transitions = await db
+      .select()
+      .from(orderStatusHistory)
+      .where(eq(orderStatusHistory.orderId, first));
+    expect(transitions.filter((entry) => entry.status === 'delivered')).toHaveLength(1);
+
+    await accept(a, second);
+    await receive(a, second);
+    await deliver(a, second);
+    const response = await request(a, '/history');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    const result = courierDeliveryHistoryResponseSchema.parse(await response.json());
+    const sorted = [...result.deliveries].sort(
+      (left, right) =>
+        Date.parse(right.deliveredAt) - Date.parse(left.deliveredAt) ||
+        right.id.localeCompare(left.id),
+    );
+    expect(result.deliveries).toEqual(sorted);
+    expect(result.deliveries.map((delivery) => delivery.id).sort()).toEqual([first, second].sort());
+    expect(result.deliveries[0]).toMatchObject({
+      storeName: '架空店舗',
+      total: 1000,
+    });
+    expect(await (await request(b, '/history')).json()).toEqual({ deliveries: [] });
   });
 });
