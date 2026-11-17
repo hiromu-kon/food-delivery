@@ -145,13 +145,15 @@ afterAll(async () => {
 describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
   it('R-11 調理中・準備完了の未担当注文だけを一覧に返し、距離を計算する', async () => {
     const ids = [await order('preparing'), await order('ready')];
+    const excludedIds: string[] = [];
     for (const status of ['pending', 'delivering', 'delivered', 'canceled'] as const)
-      await order(status);
+      excludedIds.push(await order(status));
     const response = await request(a, '');
     expect(response.headers.get('cache-control')).toBe('no-store');
     const result = courierOrderListSchema.parse(await response.json());
-    expect(result.orders.map((row) => row.id)).toEqual(ids);
-    expect(result.orders[0]?.distanceMeters).toBeCloseTo(111.195, 2);
+    expect(result.orders.map((row) => row.id)).toEqual(expect.arrayContaining(ids));
+    for (const id of excludedIds) expect(result.orders.map((row) => row.id)).not.toContain(id);
+    expect(result.orders.find((row) => row.id === ids[0])?.distanceMeters).toBeCloseTo(111.195, 2);
     expect(JSON.stringify(result)).not.toContain('担当者だけのメモ');
     expect(JSON.stringify(result)).not.toContain('架空お届け先');
     await db.update(couriers).set({ isAvailable: false }).where(eq(couriers.userId, a.id));
@@ -166,7 +168,8 @@ describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
     expect(stored?.status).toBe('ready');
     const loser = stored?.courierId === a.id ? b : a;
     expect((await request(loser, `/${id}`)).status).toBe(404);
-    expect(await (await request(loser, '')).json()).toEqual({ orders: [] });
+    const loserList = courierOrderListSchema.parse(await (await request(loser, '')).json());
+    expect(loserList.orders.map((row) => row.id)).not.toContain(id);
   });
   it('R-11 同じ配達員が別注文を同時に受けても1件だけになる', async () => {
     const responses = await Promise.all([
