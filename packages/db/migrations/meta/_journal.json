@@ -64,6 +64,13 @@
       "when": 1794380797988,
       "tag": "0008_soft_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794835598924,
+      "tag": "0009_hesitant_demogoblin",
+      "breakpoints": true
     }
   ]
 }
