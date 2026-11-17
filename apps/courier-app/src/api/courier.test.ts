@@ -8,6 +8,9 @@ import {
   currentDelivery,
   deliveryDetail,
   acceptDelivery,
+  receiveDelivery,
+  completeDelivery,
+  deliveryHistory,
 } from './courier';
 import { SessionController } from '../features/auth/session';
 
@@ -147,4 +150,41 @@ it('受注競合のコードを保持し、結果不明後も担当中の再取�
     new Response(JSON.stringify({ order: { ...delivery, isAssignedToMe: true } })),
   );
   expect((await currentDelivery(controller)).order?.isAssignedToMe).toBe(true);
+});
+it('受け取り・配達完了・自分の配達履歴を型付き API で取得する', async () => {
+  const { controller, nativeFetch } = await deliveryController();
+  nativeFetch.mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({ order: { ...delivery, status: 'delivering', isAssignedToMe: true } }),
+    ),
+  );
+  expect((await receiveDelivery(controller, delivery.id)).order.status).toBe('delivering');
+  expect(nativeFetch.mock.calls.at(-1)?.[0]).toBe(
+    `http://api.example.test/courier/orders/${delivery.id}/receive`,
+  );
+  nativeFetch.mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({ order: { ...delivery, status: 'delivered', isAssignedToMe: true } }),
+    ),
+  );
+  expect((await completeDelivery(controller, delivery.id)).order.status).toBe('delivered');
+  expect(nativeFetch.mock.calls.at(-1)?.[0]).toBe(
+    `http://api.example.test/courier/orders/${delivery.id}/deliver`,
+  );
+  nativeFetch.mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({
+        deliveries: [
+          {
+            id: delivery.id,
+            storeName: delivery.storeName,
+            total: 1000,
+            deliveredAt: '2026-11-17T00:00:00.000Z',
+          },
+        ],
+      }),
+    ),
+  );
+  expect((await deliveryHistory(controller)).deliveries[0]?.id).toBe(delivery.id);
+  expect(nativeFetch.mock.calls.at(-1)?.[0]).toBe('http://api.example.test/courier/orders/history');
 });

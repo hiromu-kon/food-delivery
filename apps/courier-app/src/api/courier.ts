@@ -1,5 +1,6 @@
 import {
   courierAvailabilitySchema,
+  courierDeliveryHistoryResponseSchema,
   courierMeSchema,
   courierOrderListSchema,
   courierCurrentOrderSchema,
@@ -55,5 +56,30 @@ export function acceptDelivery(controller: SessionController, id: string) {
     });
     await assertAuthSuccess(response);
     return courierOrderResponseSchema.parse(await response.json());
+  });
+}
+export function receiveDelivery(controller: SessionController, id: string) {
+  return controller.authenticatedRequest(async (token) => {
+    const response = await createApiClient(token).courier.orders[':id'].receive.$post({
+      param: { id },
+    });
+    await assertAuthSuccess(response);
+    return courierOrderResponseSchema.parse(await response.json());
+  });
+}
+export function completeDelivery(controller: SessionController, id: string) {
+  return controller.authenticatedRequest(async (token) => {
+    const response = await createApiClient(token).courier.orders[':id'].deliver.$post({
+      param: { id },
+    });
+    await assertAuthSuccess(response);
+    return courierOrderResponseSchema.parse(await response.json());
+  });
+}
+export function deliveryHistory(controller: SessionController) {
+  return controller.authenticatedRequest(async (token) => {
+    const response = await createApiClient(token).courier.orders.history.$get();
+    await assertAuthSuccess(response);
+    return courierDeliveryHistoryResponseSchema.parse(await response.json());
   });
 }
