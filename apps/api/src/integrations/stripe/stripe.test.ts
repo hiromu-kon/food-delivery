@@ -3,6 +3,7 @@ import { createStripeClient } from './stripe';
 const intent = {
   id: 'pi_fake',
   status: 'requires_confirmation',
+  confirmation_method: 'automatic',
   amount: 1700,
   amount_received: 0,
   amount_capturable: 0,
@@ -23,7 +24,7 @@ describe('Stripe REST adapter (injected HTTP, no network)', () => {
       amount: '1700',
       currency: 'jpy',
       capture_method: 'manual',
-      confirmation_method: 'manual',
+      confirmation_method: 'automatic',
       'payment_method_types[]': 'card',
       payment_method: 'pm_fake',
     });
@@ -34,6 +35,9 @@ describe('Stripe REST adapter (injected HTTP, no network)', () => {
       ),
     );
     await client.confirm('pi_fake', 'attempt:confirm');
+    expect(
+      new URLSearchParams(fetcher.mock.calls[1]?.[1]?.body as string).get('use_stripe_sdk'),
+    ).toBe('true');
     expect(fetcher.mock.calls[1]).toMatchObject([
       'https://api.stripe.com/v1/payment_intents/pi_fake/confirm',
       { method: 'POST', headers: { 'Idempotency-Key': 'attempt:confirm' } },

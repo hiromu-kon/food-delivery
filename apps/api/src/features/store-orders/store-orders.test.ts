@@ -132,6 +132,7 @@ beforeEach(async () => {
 
 async function storeFixture() {
   const order = await createOrderService(db, stripe).checkout(userId, key, input);
+  if ('clientSecret' in order) throw new Error('Unexpected action required');
   const staffId = randomUUID();
   await db.insert(users).values({
     id: staffId,

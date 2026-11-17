@@ -8,7 +8,7 @@ import { Text } from '@repo/native-ui/text';
 import { TextField } from '@repo/native-ui/text-field';
 import { randomUUID } from 'expo-crypto';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { createAddressTransport } from '@/api/addresses';
 import { createOrderTransport } from '@/api/orders';
@@ -23,7 +23,13 @@ import {
   type Attempt,
   type CheckoutForm,
 } from './checkout';
-import { PaymentCard, PaymentProvider, stripeTestKey, usePaymentMethod } from './payment';
+import {
+  PaymentCard,
+  PaymentProvider,
+  stripeTestKey,
+  usePaymentMethod,
+  useCheckoutAction,
+} from './payment';
 
 const attemptPrefix = 'customer.checkout.attempt.v1';
 export function CheckoutScreen() {
@@ -104,6 +110,18 @@ function CheckoutContent({ attempt, attemptKey }: { attempt: Attempt | null; att
   });
   const [cardComplete, setCardComplete] = useState(false);
   const paymentMethod = usePaymentMethod(cardComplete);
+  const handleAction = useCheckoutAction();
+  const active = useRef(false);
+  const generation = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      active.current = true;
+      return () => {
+        active.current = false;
+        generation.current++;
+      };
+    }, []),
+  );
   const [controller] = useState(
     () =>
       new CheckoutController(
@@ -127,6 +145,21 @@ function CheckoutContent({ attempt, attemptKey }: { attempt: Attempt | null; att
         attempt,
       ),
   );
+  useEffect(() => {
+    controller.setSubmit(async (request, key) => {
+      const epoch = generation.current;
+      const order = await createOrderTransport(session, async (secret) => {
+        if (!active.current || epoch !== generation.current)
+          throw new AuthRequestError('同じ注文を再確認してください。');
+        await handleAction(secret);
+        if (!active.current || epoch !== generation.current)
+          throw new AuthRequestError('同じ注文を再確認してください。');
+      })(request, key);
+      if (!active.current || epoch !== generation.current)
+        throw new AuthRequestError('同じ注文を再確認してください。');
+      return order;
+    });
+  }, [controller, session, handleAction]);
   useEffect(() => controller.setPaymentMethod(paymentMethod), [controller, paymentMethod]);
   const state = useSyncExternalStore(
     controller.subscribe,
