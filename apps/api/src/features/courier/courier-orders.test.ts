@@ -216,9 +216,7 @@ describe('F-14 配達受注（実PostgreSQL、決済なし）', () => {
       for (const path of ['', '/current', `/${id}`])
         expect((await request(a, path)).status).toBe(403);
       expect((await accept(a, id)).status).toBe(403);
-      expect(
-        (await db.select().from(orders).where(eq(orders.id, id)))[0]?.courierId,
-      ).toBeNull();
+      expect((await db.select().from(orders).where(eq(orders.id, id)))[0]?.courierId).toBeNull();
     },
   );
   it('認証・CookieのOrigin検証を取得と受注にも適用する', async () => {

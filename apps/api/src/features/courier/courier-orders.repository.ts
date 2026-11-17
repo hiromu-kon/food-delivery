@@ -42,15 +42,8 @@ async function detail(tx: Tx, userId: string, id: string) {
     .where(and(eq(orders.id, id), or(waiting, eq(orders.courierId, userId))));
   if (!row)
     throw new DomainError('NOT_FOUND', '配達待ちの注文が見つかりません。一覧を更新してください');
-  const {
-    courierId,
-    deliveryNote,
-    storeLatitude,
-    storeLongitude,
-    latitude,
-    longitude,
-    ...order
-  } = row;
+  const { courierId, deliveryNote, storeLatitude, storeLongitude, latitude, longitude, ...order } =
+    row;
   return {
     ...order,
     distanceMeters: distanceMeters(
@@ -125,10 +118,7 @@ export function createCourierOrdersRepository(db: Db) {
         const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
         if (!order)
           throw new DomainError('NOT_FOUND', '注文が見つかりません。一覧を更新してください');
-        if (
-          order.courierId === userId &&
-          activeStatuses.some((status) => status === order.status)
-        )
+        if (order.courierId === userId && activeStatuses.some((status) => status === order.status))
           return { order: await detail(tx, userId, id) };
         if (order.courierId || (order.status !== 'preparing' && order.status !== 'ready'))
           throw new DomainError(
