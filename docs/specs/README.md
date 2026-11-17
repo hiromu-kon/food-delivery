@@ -11,6 +11,8 @@
 | [admin-auth.md](admin-auth.md)         | 運営認証と初期アカウント発行           |
 | [auth.md](auth.md)                     | 認証 API・セッション・ロールの扱い     |
 
+運営の店舗管理（F-17 / S-A04・S-A05）は [store-admin.md](store-admin.md) を参照する。
+
 ## ID の付け方
 
 | 接頭辞 | 対象                                               | 例    |

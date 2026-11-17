@@ -131,7 +131,10 @@ export function AdminSessionGuard({ children }: { children: ReactNode }) {
         title="Food Delivery"
         subtitle="運営の管理"
         className="h-auto w-full md:sticky md:h-dvh md:w-60 [&_p]:wrap-anywhere"
-        items={[{ href: '/admin/orders', label: '注文一覧', icon: null }]}
+        items={[
+          { href: '/admin/stores', label: '店舗管理', icon: null },
+          { href: '/admin/orders', label: '注文一覧', icon: null },
+        ]}
         footer={
           <Button variant="ghost" className="w-full" onClick={() => void logout()}>
             ログアウト

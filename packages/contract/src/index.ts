@@ -12,3 +12,4 @@ export * from './admin-auth';
 export * from './courier';
 export * from './courier-admin';
 export * from './admin-orders';
+export * from './store-admin';
