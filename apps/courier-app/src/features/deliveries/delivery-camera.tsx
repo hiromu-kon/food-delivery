@@ -171,9 +171,6 @@ export function DeliveryCamera({
 
   return (
     <View className="gap-3">
-      <Text>
-        商品を置いた場所の写真を1枚撮影・送信してください。人物や不要な個人情報が写らないようにしてください。
-      </Text>
       {message ? <Text accessibilityRole="alert">{message}</Text> : null}
       {photo ? (
         <View className="gap-3">
@@ -188,12 +185,7 @@ export function DeliveryCamera({
           </Button>
         </View>
       ) : hasUploadedPhoto ? (
-        <View className="gap-2">
-          <Text className="text-secondary">写真の送信を確認しました。配達完了にできます。</Text>
-          <Button variant="secondary" disabled={busy} onPress={requestCamera}>
-            写真を撮り直す
-          </Button>
-        </View>
+        <Text className="text-secondary">写真の送信を確認しました。</Text>
       ) : null}
     </View>
   );

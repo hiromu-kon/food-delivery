@@ -3,7 +3,7 @@ import type { CourierOrderDetail } from '@repo/contract';
 import { Button } from '@repo/native-ui/button';
 import { Text } from '@repo/native-ui/text';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AppState, View } from 'react-native';
+import { AppState, Linking, View } from 'react-native';
 
 import {
   uploadDeliveryPhoto,
@@ -23,10 +23,12 @@ export function Deliveries({
   controller,
   available,
   onFooterChange,
+  onActiveDeliveryChange,
 }: {
   controller: SessionController;
   available: boolean;
   onFooterChange: (footer: ReactNode | null) => void;
+  onActiveDeliveryChange: (active: boolean) => void;
 }) {
   const [orders, setOrders] = useState<DeliveryList>([]);
   const [selected, setSelected] = useState<CourierOrderDetail | null>(null);
@@ -131,6 +133,10 @@ export function Deliveries({
   }, [controller, run, selected]);
 
   useEffect(() => {
+    onActiveDeliveryChange(Boolean(selected?.isAssignedToMe && selected.status === 'delivering'));
+  }, [onActiveDeliveryChange, selected]);
+
+  useEffect(() => {
     if (
       !selected?.isAssignedToMe ||
       selected.status !== 'delivering' ||
@@ -143,9 +149,11 @@ export function Deliveries({
 
   return (
     <View className="gap-4">
-      <Text variant="heading-l">
-        {selected ? (selected.isAssignedToMe ? '担当中の配達' : '配達の詳細') : '配達待ちの注文'}
-      </Text>
+      {selected?.isAssignedToMe && selected.status === 'delivering' ? null : (
+        <Text variant="heading-l">
+          {selected ? (selected.isAssignedToMe ? '担当中の配達' : '配達の詳細') : '配達待ちの注文'}
+        </Text>
+      )}
       {message ? (
         <Text accessibilityRole="alert" className="text-danger">
           {message}
@@ -164,27 +172,15 @@ export function Deliveries({
                     ? '配達中'
                     : '配達待ちではありません'}
             </Text>
+            <Text className="text-secondary">{selected.storeName}</Text>
           </View>
           <View className="gap-2 rounded-2xl border border-default p-4">
             <Text className="text-secondary">お届け先</Text>
             <Text variant="heading-m">{selected.address}</Text>
             {selected.building ? <Text>{selected.building}</Text> : null}
-            <Text>{selected.customerPhoneNumber ?? '電話番号未登録'}</Text>
-            <Text>店舗から直線 {(selected.distanceMeters / 1000).toFixed(1)} km</Text>
-          </View>
-          <Text variant="heading-m">{selected.storeName}</Text>
-          <Text>店舗：{selected.storeAddress}</Text>
-          <View className="gap-2 rounded-2xl border border-default p-4">
-            <Text className="text-secondary">注文内容</Text>
-            {selected.items.map((item) => (
-              <Text key={item.menuItemId}>
-                {item.name} × {item.quantity}
-              </Text>
-            ))}
-          </View>
-          <View className="gap-2 rounded-2xl border border-default p-4">
-            <Text className="text-secondary">お渡し方法</Text>
-            <Text>{selected.fulfillment === 'hand_delivery' ? '手渡し' : '置き配'}</Text>
+            <Text>
+              受け取り方法：{selected.fulfillment === 'hand_delivery' ? '手渡し' : '置き配'}
+            </Text>
             {selected.dropoffLocation ? (
               <Text>
                 置き場所：
@@ -198,6 +194,52 @@ export function Deliveries({
               </Text>
             ) : null}
             <Text>配達メモ：{selected.deliveryNote || 'なし'}</Text>
+            {selected.customerPhoneNumber ? (
+              <Button
+                variant="secondary"
+                onPress={() =>
+                  void Linking.openURL(`tel:${selected.customerPhoneNumber}`).catch(() =>
+                    setMessage('電話アプリを開けませんでした。'),
+                  )
+                }
+              >
+                電話する
+              </Button>
+            ) : (
+              <Text>電話番号未登録</Text>
+            )}
+            <Button
+              variant="secondary"
+              onPress={() =>
+                void Linking.openURL(
+                  `https://maps.apple.com/?q=${encodeURIComponent(
+                    [selected.address, selected.building].filter(Boolean).join(' '),
+                  )}`,
+                ).catch(() => setMessage('地図アプリを開けませんでした。'))
+              }
+            >
+              地図アプリで開く
+            </Button>
+            {selected.isAssignedToMe &&
+            selected.status === 'delivering' &&
+            selected.fulfillment === 'leave_at_door' ? (
+              <DeliveryCamera
+                key={selected.id}
+                busy={busy}
+                hasUploadedPhoto={selected.hasDeliveryPhoto}
+                onUpload={uploadPhoto}
+                onComplete={markDelivered}
+                onFooterChange={onFooterChange}
+              />
+            ) : null}
+          </View>
+          <View className="gap-2 rounded-2xl border border-default p-4">
+            <Text className="text-secondary">注文内容</Text>
+            {selected.items.map((item) => (
+              <Text key={item.menuItemId}>
+                {item.name} × {item.quantity}
+              </Text>
+            ))}
           </View>
           {selected.isAssignedToMe ? (
             <>
@@ -210,21 +252,6 @@ export function Deliveries({
                 >
                   受け取った
                 </Button>
-              ) : null}
-              {selected.status === 'delivering' && selected.fulfillment === 'leave_at_door' ? (
-                <View className="gap-3">
-                  {selected.hasDeliveryPhoto ? (
-                    <Text>写真の送信を確認しました。配達完了にできます。</Text>
-                  ) : null}
-                  <DeliveryCamera
-                    key={selected.id}
-                    busy={busy}
-                    hasUploadedPhoto={selected.hasDeliveryPhoto}
-                    onUpload={uploadPhoto}
-                    onComplete={markDelivered}
-                    onFooterChange={onFooterChange}
-                  />
-                </View>
               ) : null}
               {selected.status === 'delivering' && selected.fulfillment === 'hand_delivery' ? (
                 <Button

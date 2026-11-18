@@ -147,6 +147,7 @@ function CourierHome({ controller, user }: { controller: SessionController; user
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState<'home' | 'history' | 'account'>('home');
   const [deliveryFooter, setDeliveryFooter] = useState<ReactNode>(null);
+  const [hasActiveDelivery, setHasActiveDelivery] = useState(false);
   const [deliveries, setDeliveries] = useState<
     Awaited<ReturnType<typeof deliveryHistory>>['deliveries']
   >([]);
@@ -204,7 +205,15 @@ function CourierHome({ controller, user }: { controller: SessionController; user
   }, [controller, section, historyRevision]);
   return (
     <Screen
-      title={section === 'account' ? 'アカウント' : section === 'history' ? '配達履歴' : 'ホーム'}
+      title={
+        section === 'account'
+          ? 'アカウント'
+          : section === 'history'
+            ? '配達履歴'
+            : hasActiveDelivery
+              ? '配達中'
+              : 'ホーム'
+      }
       footer={
         section === 'home' && deliveryFooter ? (
           deliveryFooter
@@ -270,51 +279,62 @@ function CourierHome({ controller, user }: { controller: SessionController; user
         </>
       ) : (
         <>
-          <Text variant="heading-l">{user.name}さん</Text>
-          <View className="bg-subtle rounded-md p-6 gap-4">
-            <Text variant="heading-l">
-              {available === null ? '稼働状態を確認してください' : available ? '稼働中' : '休止中'}
-            </Text>
-            <Text className="text-secondary">稼働を始めるときはスイッチをオンにしてください。</Text>
-            <Switch
-              accessibilityLabel="稼働中"
-              value={available ?? false}
-              disabled={action.busy || available === null}
-              onValueChange={(value) =>
-                void action.run(async (isCurrent) => {
-                  try {
-                    const result = await setAvailability(controller, value);
-                    if (isCurrent()) setAvailable(result.isAvailable);
-                  } catch (error) {
-                    if (isCurrent()) setAvailable(null);
-                    throw error;
+          {!hasActiveDelivery ? (
+            <>
+              <Text variant="heading-l">{user.name}さん</Text>
+              <View className="bg-subtle rounded-md p-6 gap-4">
+                <Text variant="heading-l">
+                  {available === null
+                    ? '稼働状態を確認してください'
+                    : available
+                      ? '稼働中'
+                      : '休止中'}
+                </Text>
+                <Text className="text-secondary">
+                  稼働を始めるときはスイッチをオンにしてください。
+                </Text>
+                <Switch
+                  accessibilityLabel="稼働中"
+                  value={available ?? false}
+                  disabled={action.busy || available === null}
+                  onValueChange={(value) =>
+                    void action.run(async (isCurrent) => {
+                      try {
+                        const result = await setAvailability(controller, value);
+                        if (isCurrent()) setAvailable(result.isAvailable);
+                      } catch (error) {
+                        if (isCurrent()) setAvailable(null);
+                        throw error;
+                      }
+                    })
                   }
-                })
-              }
-            />
-          </View>
-          <Button
-            variant="secondary"
-            disabled={loading}
-            loading={action.busy}
-            onPress={() =>
-              void action.run(async (isCurrent) => {
-                const result = await getCourier(controller);
-                if (isCurrent()) {
-                  setAvailable(result.courier.isAvailable);
-                  setLoadError('');
+                />
+              </View>
+              <Button
+                variant="secondary"
+                disabled={loading}
+                loading={action.busy}
+                onPress={() =>
+                  void action.run(async (isCurrent) => {
+                    const result = await getCourier(controller);
+                    if (isCurrent()) {
+                      setAvailable(result.courier.isAvailable);
+                      setLoadError('');
+                    }
+                  })
                 }
-              })
-            }
-          >
-            稼働状態を再確認
-          </Button>
+              >
+                稼働状態を再確認
+              </Button>
+            </>
+          ) : null}
           {available !== null ? (
             <Deliveries
               key={String(available)}
               controller={controller}
               available={available}
               onFooterChange={setDeliveryFooter}
+              onActiveDeliveryChange={setHasActiveDelivery}
             />
           ) : null}
           {loadError ? (
