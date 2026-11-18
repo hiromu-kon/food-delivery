@@ -2,7 +2,7 @@ import { DeliveryCamera } from './delivery-camera';
 import type { CourierOrderDetail } from '@repo/contract';
 import { Button } from '@repo/native-ui/button';
 import { Text } from '@repo/native-ui/text';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, View } from 'react-native';
 
 import {
@@ -70,46 +70,65 @@ export function Deliveries({
     };
   }, [controller, available, revision]);
 
-  function reload() {
+  const reload = useCallback(() => {
     generation.current++;
     locked.current = true;
     setBusy(true);
     setSelected(null);
     setOrders([]);
     setRevision((value) => value + 1);
-  }
+  }, []);
 
-  async function run(action: () => Promise<CourierOrderDetail | null>): Promise<boolean> {
-    if (locked.current) return false;
-    locked.current = true;
-    const current = ++generation.current;
-    setBusy(true);
-    setMessage('');
-    let succeeded = false;
-    try {
-      const order = await action();
-      if (current === generation.current) {
-        setSelected(order);
-        if (!order) setRevision((value) => value + 1);
-        succeeded = true;
+  const run = useCallback(
+    async (action: () => Promise<CourierOrderDetail | null>): Promise<boolean> => {
+      if (locked.current) return false;
+      locked.current = true;
+      const current = ++generation.current;
+      setBusy(true);
+      setMessage('');
+      let succeeded = false;
+      try {
+        const order = await action();
+        if (current === generation.current) {
+          setSelected(order);
+          if (!order) setRevision((value) => value + 1);
+          succeeded = true;
+        }
+      } catch (error) {
+        if (current !== generation.current) return false;
+        setMessage(errorMessage(error));
+        if (
+          error instanceof AuthRequestError &&
+          ['ORDER_ALREADY_ASSIGNED', 'NOT_FOUND'].includes(error.code)
+        ) {
+          reload();
+        }
+      } finally {
+        if (current === generation.current) {
+          locked.current = false;
+          setBusy(false);
+        }
       }
-    } catch (error) {
-      if (current !== generation.current) return false;
-      setMessage(errorMessage(error));
-      if (
-        error instanceof AuthRequestError &&
-        ['ORDER_ALREADY_ASSIGNED', 'NOT_FOUND'].includes(error.code)
-      ) {
-        reload();
-      }
-    } finally {
-      if (current === generation.current) {
-        locked.current = false;
-        setBusy(false);
-      }
-    }
-    return succeeded;
-  }
+      return succeeded;
+    },
+    [reload],
+  );
+
+  const uploadPhoto = useCallback(
+    (photo: Parameters<typeof uploadDeliveryPhoto>[2]) => {
+      if (!selected) return Promise.resolve(false);
+      return run(async () => (await uploadDeliveryPhoto(controller, selected.id, photo)).order);
+    },
+    [controller, run, selected],
+  );
+
+  const markDelivered = useCallback(() => {
+    if (!selected) return;
+    void run(async () => {
+      await completeDelivery(controller, selected.id);
+      return null;
+    });
+  }, [controller, run, selected]);
 
   useEffect(() => {
     if (
@@ -201,18 +220,8 @@ export function Deliveries({
                     key={selected.id}
                     busy={busy}
                     hasUploadedPhoto={selected.hasDeliveryPhoto}
-                    onUpload={async (photo) =>
-                      run(
-                        async () =>
-                          (await uploadDeliveryPhoto(controller, selected.id, photo)).order,
-                      )
-                    }
-                    onComplete={() => {
-                      void run(async () => {
-                        await completeDelivery(controller, selected.id);
-                        return null;
-                      });
-                    }}
+                    onUpload={uploadPhoto}
+                    onComplete={markDelivered}
                     onFooterChange={onFooterChange}
                   />
                 </View>
