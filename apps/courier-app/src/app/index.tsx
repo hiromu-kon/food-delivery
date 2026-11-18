@@ -1,11 +1,13 @@
 import type { AuthUser } from '@repo/contract';
 import { signInSchema } from '@repo/contract';
 import { Button } from '@repo/native-ui/button';
+import { TabBar } from '@repo/native-ui/tab-bar';
 import { Text } from '@repo/native-ui/text';
 import { TextField } from '@repo/native-ui/text-field';
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, AppState, ScrollView, Switch, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deliveryHistory, getCourier, setAvailability } from '@/api/courier';
 import { AuthRequestError, errorMessage } from '@/features/auth/request';
@@ -13,16 +15,35 @@ import type { SessionController } from '@/features/auth/session';
 import { Deliveries } from '@/features/deliveries/deliveries';
 import { useSession } from '@/features/auth/session-provider';
 
-function Screen({ title, children }: { title: string; children: ReactNode }) {
+function Screen({
+  title,
+  children,
+  footer,
+}: {
+  title: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
   return (
-    <ScrollView
-      className="bg-base flex-1"
-      contentContainerStyle={{ padding: 24 }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View className="bg-base flex-1">
       <Stack.Screen options={{ title }} />
-      <View className="w-full max-w-lg self-center gap-6">{children}</View>
-    </ScrollView>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 24, paddingBottom: footer ? 16 : 24 + insets.bottom }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="w-full max-w-lg self-center gap-6">{children}</View>
+      </ScrollView>
+      {footer ? (
+        <View
+          className="bg-base border-default border-t px-4 pt-3"
+          style={{ paddingBottom: Math.max(insets.bottom, 8) }}
+        >
+          <View className="w-full max-w-lg self-center">{footer}</View>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -125,6 +146,8 @@ function CourierHome({ controller, user }: { controller: SessionController; user
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState<'home' | 'history' | 'account'>('home');
+  const [deliveryFooter, setDeliveryFooter] = useState<ReactNode>(null);
+  const [hasActiveDelivery, setHasActiveDelivery] = useState(false);
   const [deliveries, setDeliveries] = useState<
     Awaited<ReturnType<typeof deliveryHistory>>['deliveries']
   >([]);
@@ -182,27 +205,34 @@ function CourierHome({ controller, user }: { controller: SessionController; user
   }, [controller, section, historyRevision]);
   return (
     <Screen
-      title={section === 'account' ? 'アカウント' : section === 'history' ? '配達履歴' : 'ホーム'}
+      title={
+        section === 'account'
+          ? 'アカウント'
+          : section === 'history'
+            ? '配達履歴'
+            : hasActiveDelivery
+              ? '配達中'
+              : 'ホーム'
+      }
+      footer={
+        section === 'home' && deliveryFooter ? (
+          deliveryFooter
+        ) : (
+          <TabBar
+            app="courier"
+            value={section === 'home' ? 'deliveries' : section}
+            onValueChange={(value) => {
+              if (value === 'deliveries') setSection('home');
+              else if (value === 'history') {
+                setHistoryLoading(true);
+                setHistoryError('');
+                setSection('history');
+              } else setSection('account');
+            }}
+          />
+        )
+      }
     >
-      <View className="flex-row justify-between gap-2">
-        <Button variant="ghost" disabled={action.busy} onPress={() => setSection('home')}>
-          ホーム
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={action.busy}
-          onPress={() => {
-            setHistoryLoading(true);
-            setHistoryError('');
-            setSection('history');
-          }}
-        >
-          配達履歴
-        </Button>
-        <Button variant="ghost" disabled={action.busy} onPress={() => setSection('account')}>
-          アカウント
-        </Button>
-      </View>
       {section === 'account' ? (
         <>
           <Text variant="heading-l">登録情報</Text>
@@ -249,47 +279,63 @@ function CourierHome({ controller, user }: { controller: SessionController; user
         </>
       ) : (
         <>
-          <Text variant="heading-l">{user.name}さん</Text>
-          <View className="bg-subtle rounded-md p-6 gap-4">
-            <Text variant="heading-l">
-              {available === null ? '稼働状態を確認してください' : available ? '稼働中' : '休止中'}
-            </Text>
-            <Text className="text-secondary">稼働を始めるときはスイッチをオンにしてください。</Text>
-            <Switch
-              accessibilityLabel="稼働中"
-              value={available ?? false}
-              disabled={action.busy || available === null}
-              onValueChange={(value) =>
-                void action.run(async (isCurrent) => {
-                  try {
-                    const result = await setAvailability(controller, value);
-                    if (isCurrent()) setAvailable(result.isAvailable);
-                  } catch (error) {
-                    if (isCurrent()) setAvailable(null);
-                    throw error;
+          {!hasActiveDelivery ? (
+            <>
+              <Text variant="heading-l">{user.name}さん</Text>
+              <View className="bg-subtle rounded-md p-6 gap-4">
+                <Text variant="heading-l">
+                  {available === null
+                    ? '稼働状態を確認してください'
+                    : available
+                      ? '稼働中'
+                      : '休止中'}
+                </Text>
+                <Text className="text-secondary">
+                  稼働を始めるときはスイッチをオンにしてください。
+                </Text>
+                <Switch
+                  accessibilityLabel="稼働中"
+                  value={available ?? false}
+                  disabled={action.busy || available === null}
+                  onValueChange={(value) =>
+                    void action.run(async (isCurrent) => {
+                      try {
+                        const result = await setAvailability(controller, value);
+                        if (isCurrent()) setAvailable(result.isAvailable);
+                      } catch (error) {
+                        if (isCurrent()) setAvailable(null);
+                        throw error;
+                      }
+                    })
                   }
-                })
-              }
-            />
-          </View>
-          <Button
-            variant="secondary"
-            disabled={loading}
-            loading={action.busy}
-            onPress={() =>
-              void action.run(async (isCurrent) => {
-                const result = await getCourier(controller);
-                if (isCurrent()) {
-                  setAvailable(result.courier.isAvailable);
-                  setLoadError('');
+                />
+              </View>
+              <Button
+                variant="secondary"
+                disabled={loading}
+                loading={action.busy}
+                onPress={() =>
+                  void action.run(async (isCurrent) => {
+                    const result = await getCourier(controller);
+                    if (isCurrent()) {
+                      setAvailable(result.courier.isAvailable);
+                      setLoadError('');
+                    }
+                  })
                 }
-              })
-            }
-          >
-            稼働状態を再確認
-          </Button>
+              >
+                稼働状態を再確認
+              </Button>
+            </>
+          ) : null}
           {available !== null ? (
-            <Deliveries key={String(available)} controller={controller} available={available} />
+            <Deliveries
+              key={String(available)}
+              controller={controller}
+              available={available}
+              onFooterChange={setDeliveryFooter}
+              onActiveDeliveryChange={setHasActiveDelivery}
+            />
           ) : null}
           {loadError ? (
             <Text accessibilityRole="alert" className="text-danger">

@@ -3,15 +3,21 @@ import { Button } from '@repo/native-ui/button';
 import { Text } from '@repo/native-ui/text';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { File } from 'expo-file-system';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Image, Linking, View } from 'react-native';
 
 export function DeliveryCamera({
   busy,
+  hasUploadedPhoto,
   onUpload,
+  onComplete,
+  onFooterChange,
 }: {
   busy: boolean;
-  onUpload: (photo: DeliveryPhotoUpload) => Promise<void>;
+  hasUploadedPhoto: boolean;
+  onUpload: (photo: DeliveryPhotoUpload) => Promise<boolean>;
+  onComplete: () => void;
+  onFooterChange: (footer: ReactNode | null) => void;
 }) {
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
@@ -21,6 +27,7 @@ export function DeliveryCamera({
   const [ready, setReady] = useState(false);
   const [photo, setPhoto] = useState<DeliveryPhotoUpload>();
   const [message, setMessage] = useState('');
+  const [replacingUploadedPhoto, setReplacingUploadedPhoto] = useState(false);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -28,7 +35,36 @@ export function DeliveryCamera({
     };
   }, []);
 
-  async function capture() {
+  const requestCamera = useCallback(() => {
+    setMessage('');
+    if (permission?.granted) {
+      setPhoto(undefined);
+      setReplacingUploadedPhoto(hasUploadedPhoto);
+      setReady(false);
+      setOpen(true);
+    } else if (permission && !permission.canAskAgain) {
+      void Linking.openSettings().catch(() => {
+        if (mounted.current)
+          setMessage('設定を開けません。端末の設定からカメラを許可してください。');
+      });
+    } else {
+      void requestPermission()
+        .then((result) => {
+          if (!mounted.current) return;
+          if (result.granted) {
+            setPhoto(undefined);
+            setReplacingUploadedPhoto(hasUploadedPhoto);
+            setReady(false);
+            setOpen(true);
+          } else setMessage('カメラの利用を許可してください。端末の設定から変更できます。');
+        })
+        .catch(() => {
+          if (mounted.current) setMessage('カメラの権限を確認できません。再試行してください。');
+        });
+    }
+  }, [hasUploadedPhoto, permission, requestPermission]);
+
+  const capture = useCallback(async () => {
     if (taking.current || !ready || busy) return;
     taking.current = true;
     setReady(false);
@@ -56,34 +92,17 @@ export function DeliveryCamera({
     } finally {
       taking.current = false;
     }
-  }
+  }, [busy, ready]);
 
-  return (
-    <View className="gap-3">
-      <Text>
-        商品を置いた場所の写真を1枚撮影・送信してください。人物や不要な個人情報が写らないようにしてください。
-      </Text>
-      {message ? <Text accessibilityRole="alert">{message}</Text> : null}
-      {photo ? (
-        <>
-          <Image
-            source={{ uri: `data:image/jpeg;base64,${photo.base64}` }}
-            accessibilityLabel="送信前の置き配写真"
-            style={{ width: '100%', height: 240 }}
-            resizeMode="contain"
-          />
-          <Button
-            disabled={busy}
-            onPress={() => {
-              void onUpload(photo);
-            }}
-          >
-            この写真を送信
-          </Button>
-        </>
-      ) : null}
-      {open && permission?.granted ? (
-        <>
+  const sendPhoto = useCallback(async () => {
+    if (!photo || busy) return;
+    if (await onUpload(photo)) setReplacingUploadedPhoto(false);
+  }, [busy, onUpload, photo]);
+
+  const footer = useMemo(() => {
+    if (open && permission?.granted)
+      return (
+        <View className="gap-3">
           <CameraView
             ref={camera}
             facing="back"
@@ -95,56 +114,79 @@ export function DeliveryCamera({
             }}
             style={{ width: '100%', height: 280 }}
           />
-          <Button
-            disabled={busy || !ready}
-            onPress={() => {
-              void capture();
-            }}
-          >
+          <Button disabled={busy || !ready} onPress={() => void capture()}>
             撮影する
           </Button>
           <Button variant="secondary" disabled={busy} onPress={() => setOpen(false)}>
             撮影をやめる
           </Button>
-        </>
-      ) : (
-        <Button
-          variant="secondary"
-          disabled={busy}
-          onPress={() => {
-            setMessage('');
-            if (permission?.granted) {
-              setPhoto(undefined);
-              setReady(false);
-              setOpen(true);
-            } else if (permission && !permission.canAskAgain) {
-              void Linking.openSettings().catch(() => {
-                if (mounted.current)
-                  setMessage('設定を開けません。端末の設定からカメラを許可してください。');
-              });
-            } else
-              void requestPermission()
-                .then((result) => {
-                  if (!mounted.current) return;
-                  if (result.granted) {
-                    setPhoto(undefined);
-                    setReady(false);
-                    setOpen(true);
-                  } else setMessage('カメラの利用を許可してください。端末の設定から変更できます。');
-                })
-                .catch(() => {
-                  if (mounted.current)
-                    setMessage('カメラの権限を確認できません。再試行してください。');
-                });
-          }}
-        >
+        </View>
+      );
+    if (photo && (!hasUploadedPhoto || replacingUploadedPhoto))
+      return (
+        <Button disabled={busy} loading={busy} onPress={() => void sendPhoto()}>
+          この写真を送信
+        </Button>
+      );
+    if (hasUploadedPhoto)
+      return (
+        <View className="gap-2">
+          <Text className="text-secondary">写真はお客様の注文状況に表示されます。</Text>
+          <Button disabled={busy} loading={busy} onPress={onComplete}>
+            置いた（配達完了）
+          </Button>
+        </View>
+      );
+    return (
+      <View className="gap-2">
+        <Text className="text-secondary">
+          置き配です。置いた場所の写真を1枚撮ってから完了にします。
+        </Text>
+        <Button disabled={busy} onPress={requestCamera}>
           {permission && !permission.canAskAgain && !permission.granted
             ? '端末の設定を開く'
-            : photo
-              ? '写真を撮り直す'
-              : '置いた場所の写真を撮る'}
+            : '置いた場所の写真を撮る'}
         </Button>
-      )}
+      </View>
+    );
+  }, [
+    busy,
+    capture,
+    hasUploadedPhoto,
+    onComplete,
+    open,
+    permission,
+    photo,
+    ready,
+    replacingUploadedPhoto,
+    requestCamera,
+    sendPhoto,
+  ]);
+
+  useEffect(() => {
+    onFooterChange(footer);
+  }, [footer, onFooterChange]);
+
+  useEffect(() => () => onFooterChange(null), [onFooterChange]);
+
+  return (
+    <View className="gap-3">
+      {message ? <Text accessibilityRole="alert">{message}</Text> : null}
+      {photo ? (
+        <View className="gap-3">
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${photo.base64}` }}
+            accessibilityLabel="送信前の置き配写真"
+            style={{ width: '100%', height: 240 }}
+            resizeMode="contain"
+          />
+          <Button variant="secondary" disabled={busy} onPress={requestCamera}>
+            写真を撮り直す
+          </Button>
+        </View>
+      ) : hasUploadedPhoto ? (
+        <Text className="text-secondary">写真の送信を確認しました。</Text>
+      ) : null}
     </View>
   );
 }

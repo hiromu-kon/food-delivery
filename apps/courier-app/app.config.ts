@@ -9,6 +9,7 @@ const config: ExpoConfig = {
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'light',
   ios: {
+    bundleIdentifier: 'com.hiromu-kon.fooddelivery.courier',
     supportsTablet: false,
   },
   android: {
